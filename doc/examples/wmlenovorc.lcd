@@ -1,0 +1,126 @@
+#wmlenovo config file
+#see manpage for details
+
+# use-proc // Use depricated /proc/acpi interface instead of /sys. Default is off.
+#use-proc
+
+# dell // Force to use Dell's I8K interface (via /proc/i8k)
+#dell
+
+# i8k = <string> // name of I8K file.
+i8k = /proc/i8k
+
+# ibm // Force to use IBM/Lenovo platform specific hwmon
+#ibm
+
+# acpi_temperature	=	<string> // name of temperature file in /proc/acpi namespace
+acpi_temperature	=	/proc/acpi/thermal_zone/THM0/temperature
+
+# acpi_bat0_state	=	<string> // name of bat0 state file in /proc/acpi namespace
+acpi_bat0_state	=	/proc/acpi/battery/BAT0/state
+
+# acpi_bat1_state	=	<string> // name of bat1 state file in /proc/acpi namespace
+acpi_bat1_state	=	/proc/acpi/battery/BAT1/state
+
+# acpi_bat0_info	=	<string> // name of bat0 info file in /proc/acpi namespace
+acpi_bat0_info	=	/proc/acpi/battery/BAT0/info
+
+# acpi_bat1_info	=	<string> // name of bat1 info file in /proc/acpi namespace
+acpi_bat1_info	=	/proc/acpi/battery/BAT1/info
+
+# acpi_ac_state	=	<string> // name of ac_adapter state file in /proc/acpi namespace
+acpi_ac_state	=	/proc/acpi/ac_adapter/AC/state
+
+# sysfs_bat0_state // name of sysfs file to grab battery status 
+sysfs_bat0_state = /sys/class/power_supply/BAT0/status
+
+# sysfs_bat1_state // name of sysfs file to grab secondary battery status
+sysfs_bat1_state = /sys/class/power_supply/BAT1/status
+
+# sysfs_bat0_charge_now // name of sysfs file to grab remaining capacity
+sysfs_bat0_charge_now = /sys/class/power_supply/BAT0/charge_now
+
+# sysfs_bat1_charge_now // name of sysfs file to grab remaining capacity of secondary battery
+sysfs_bat1_charge_now = /sys/class/power_supply/BAT1/charge_now
+
+# sysfs_bat0_charge_full // name of sysfs file to grab full capacity
+sysfs_bat0_charge_full = /sys/class/power_supply/BAT0/charge_full
+
+# sysfs_bat1_charge_full // name of sysfs file to grab full capacity of secondary battery
+sysfs_bat1_charge_full = /sys/class/power_supply/BAT1/charge_full
+
+# sysfs_bat0_current_now // name of sysfs file to grab value of current
+sysfs_bat0_current_now = /sys/class/power_supply/BAT0/current_now
+
+# sysfs_bat1_current_now // name of sysfs file to grab value of secondary battery's current 
+sysfs_bat1_current_now = /sys/class/power_supply/BAT1/current_now
+
+# sysfs_temperature // name of sysfs file to grab CPU temperature value
+sysfs_temperature = /sys/class/hwmon/hwmon0/temp1_input
+
+# sysfs_video_temperature // name of sysfs file to grab CPU temperature value
+sysfs_video_temperature = /sys/class/hwmon/hwmon0/temp4_input
+
+# sysfs_mb_temperature // name of sysfs file to grab motherboard temperature value
+sysfs_mb_temperature = /sys/class/hwmon/hwmon0/temp5_input
+
+# sysfs_ibm_temperature // sysfs file to collect CPU temperature for IBM/Lenovo laptops
+sysfs_ibm_temperature = /sys/devices/platform/thinkpad_hwmon/temp1_input
+
+# sysfs_ibm_video_temperature // sysfs file to collect GPU temperature for IBM/Lenovo laptops
+sysfs_ibm_video_temperature = /sys/devices/platform/thinkpad_hwmon/temp2_input
+
+# sysfs_ibm_mb_temperature // sysfs file to collect motherboard temperature for IBM/Lenovo laptops
+sysfs_ibm_mb_temperature = /sys/devices/platform/thinkpad_hwmon/temp3_input
+
+# sysfs_ibm_fan // sysfs file to collect fan's RPM for IBM/Lenovo laptops
+sysfs_ibm_fan = /sys/devices/platform/thinkpad_hwmon/fan1_input
+
+# sysfs_ac_state // sysfs file to grab power adapter state 
+sysfs_ac_state = /sys/class/power_supply/AC/online
+
+# sysfs_cpu_performance // file in sysfs to grab current CPU frequency. 
+# Note: /sys/devices/system/cpu/cpu0/cpufreq/cpuinfo_cur_freq require root privelegies so let use scaling one instead. 
+sysfs_cpu_performance = /sys/devices/system/cpu/cpu0/cpufreq/scaling_cur_freq
+
+# lightcolor	=	<string> // must be rgb:XX/XX/XX (hex)
+lightcolor 	=	rgb:6E/C6/3B
+
+# sign-light-color	=	<string> // must be rgb:XX/XX/XX (hex)
+sign-light-color 	=	rgb:6C/B2/37
+
+# foreground-color	=	<string> // must be rgb:XX/XX/XX (hex)
+foreground-color 	=	rgb:02/02/02
+
+# backlight-foreground-color	=	<string> // must be rgb:XX/XX/XX (hex)
+backlight-foreground-color 	=	rgb:02/02/02
+
+# backgound-color	=	<string> // must be rgb:XX/XX/XX (hex)
+background-color 	=	rgb:8E/96/8A
+
+# sign-color	=	<string> // must be rgb:XX/XX/XX (hex)
+sign-color 	=	rgb:76/7C/6F
+
+# togglespeed	= 	<integer> // in seconds
+togglespeed	=   	5
+
+# animationspeed	=	<integer> // in ms >=100
+animationspeed	= 	150
+
+# historysize	=	<integer> // >=1 <=1000
+history_size	=	20
+
+# mode		= 	<string> // [rate,temp,toggle]
+mode		= 	toggle
+
+# backlight	=	[yes|no|true|false]
+backlight	=	no
+
+# updateinterval	=	<integer> // interval in seconds
+updateinterval	=	2
+
+# alarm		=	<integer> // alarm level in percent
+alarm		= 	10
+
+# alarm_temp		=	<integer> // temperature alarm level in Celsius
+alarm_temp		= 	90
