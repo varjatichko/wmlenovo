@@ -13,6 +13,9 @@ i8k = /proc/i8k
 # ibm // Force to use IBM/Lenovo platform specific hwmon
 #ibm
 
+# use-bat-color // Use different color schemes when laptop is on AC and BAT power
+# use-bat-color
+
 # acpi_temperature	=	<string> // name of temperature file in /proc/acpi namespace
 acpi_temperature	=	/proc/acpi/thermal_zone/THM0/temperature
 
@@ -101,6 +104,24 @@ background-color 	=	rgb:22/22/33
 # sign-color	=	<string> // must be rgb:XX/XX/XX (hex)
 sign-color 	=	rgb:22/22/77
 
+# bat-lightcolor	=	<string> // must be rgb:XX/XX/XX (hex)
+bat-lightcolor 	=	rgb:FF/BB/BB
+
+# bat-sign-light-color	=	<string> // must be rgb:XX/XX/XX (hex)
+bat-sign-light-color 	=	rgb:AA/77/77
+
+# bat-foreground-color	=	<string> // must be rgb:XX/XX/XX (hex)
+bat-foreground-color 	=	rgb:FF/00/00
+
+# bat-backlight-foreground-color	=	<string> // must be rgb:XX/XX/XX (hex)
+bat-backlight-foreground-color 	=	rgb:FF/00/00
+
+# bat-backgound-color	=	<string> // must be rgb:XX/XX/XX (hex)
+bat-background-color 	=	rgb:33/22/22
+
+# bat-sign-color	=	<string> // must be rgb:XX/XX/XX (hex)
+bat-sign-color 	=	rgb:77/22/22
+
 # togglespeed	= 	<integer> // in seconds
 togglespeed	=   	5
 
@@ -124,3 +145,9 @@ alarm		= 	10
 
 # alarm_temp		=	<integer> // temperature alarm level in Celsius
 alarm_temp		= 	90
+
+# notify = <string> // Command to execute when the alarm triggered
+
+# on-ac = <string> // Command to execute when laptop switched from BAT to AC back
+
+# on-bat = <string> // Command to execute when laptop switched to BAT power

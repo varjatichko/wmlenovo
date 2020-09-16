@@ -28,6 +28,8 @@
  *
  */
 
+//#define DEBUG 1
+
 #ifdef HAVE_CONFIG_H
 #include "config.h"
 #endif
@@ -46,7 +48,7 @@
 #include <sys/stat.h>
 #endif
 
-#define WMLENOVO_VERSION "0.1.7"
+#define WMLENOVO_VERSION "0.1.8"
 
 #define FREE(data) {if (data) free (data); data = NULL;}
 
@@ -124,15 +126,25 @@ typedef enum { LIGHTOFF, LIGHTON } light;
 Pixmap pixmap;
 Pixmap backdrop_on;
 Pixmap backdrop_off;
-Pixmap parts;
+Pixmap *parts;
+Pixmap bat_backdrop_on;
+Pixmap bat_backdrop_off;
+Pixmap bat_parts;
+Pixmap ac_parts;
 Pixmap mask;
 static char	*display_name     = "";
-static char	light_color[256]  = "#ff9999";	/* back-light color */
-static char	sign_light_color[256]  = "#aa7777";	/* back-light sign color */
-static char	foreground_color[256]  = "#ff0000";	/* foreground color */
+static char	light_color[256]  = "#ffaa00";	/* back-light color */
+static char	sign_light_color[256]  = "#996633";	/* back-light sign color */
+static char	foreground_color[256]  = "#00ff00";	/* foreground color */
 static char	background_color[256]  = "#222222";	/* background color */
-static char	sign_color[256]  = "#772222";	/* sign color */
-static char	foreground_b_color[256]  = "#ff0000";	/* foreground back-light color */
+static char	sign_color[256]  = "#227722";	/* sign color */
+static char	foreground_b_color[256]  = "#aa0000";	/* foreground back-light color */
+static char	bat_light_color[256]  = "#ff9999";	/* back-light color */
+static char	bat_sign_light_color[256]  = "#aa7777";	/* back-light sign color */
+static char	bat_foreground_color[256]  = "#ff0000";	/* foreground color */
+static char	bat_background_color[256]  = "#222222";	/* background color */
+static char	bat_sign_color[256]  = "#772222";	/* sign color */
+static char	bat_foreground_b_color[256]  = "#ff0000";	/* foreground back-light color */
 char            tmp_string[256];
 static char	*config_file      = NULL;	/* name of configfile */
 static unsigned update_interval   = DEFAULT_UPDATE_INTERVAL;
@@ -141,8 +153,8 @@ static unsigned switch_authorized = True;
 static unsigned alarm_level       = 20;
 static unsigned alarm_level_temp  = 70;
 static char     *notif_cmd        = NULL;
-static char     *suspend_cmd      = NULL;
-static char     *standby_cmd      = NULL;
+static char     *on_ac_cmd        = NULL;
+static char     *on_bat_cmd        = NULL;
 static int 	mode			  = TEMP;
 static int 	togglemode		  = TOGGLEMODE;
 static int 	togglespeed		  = TOGGLESPEED;
@@ -179,6 +191,7 @@ static short int has_i8k = 0;
 static short int has_ibm_temp = 1;
 static short int has_cpu_file = 1;
 static short int use_proc = 0;
+static short int use_bat_colors = 0;
 
 #ifdef linux
 # ifndef ACPI_32_BIT_SUPPORT
@@ -315,10 +328,40 @@ int main(int argc, char **argv) {
     fprintf(stderr, "Error initializing background image.\n");
     exit(1);
   }
-  if (!dockapp_xpm2pixmap(parts_xpm, &parts, &mask, colors, ncolor)) {
+  if (!dockapp_xpm2pixmap(parts_xpm, &ac_parts, &mask, colors, ncolor)) {
     fprintf(stderr, "Error initializing parts image.\n");
     exit(1);
   }
+	
+	if (use_bat_colors) {
+  	colors[0].pixel = dockapp_getcolor(bat_light_color);
+  	 
+  	colors[1].pixel = dockapp_getcolor(bat_sign_light_color);
+
+  	colors[2].pixel = dockapp_getcolor(bat_foreground_color);
+  	
+  	colors[3].pixel = dockapp_getcolor(bat_background_color);
+  	
+  	colors[4].pixel = dockapp_getcolor(bat_sign_color);
+  	
+		colors[5].pixel = dockapp_getcolor(bat_foreground_b_color);
+
+
+  	if (!dockapp_xpm2pixmap(backlight_on_xpm, &bat_backdrop_on, &mask, colors, ncolor)) {
+  	  fprintf(stderr, "Error initializing backlit background image.\n");
+  	  exit(1);
+  	}
+  	if (!dockapp_xpm2pixmap(backlight_off_xpm, &bat_backdrop_off, &mask, colors, ncolor)) {
+  	  fprintf(stderr, "Error initializing background image.\n");
+  	  exit(1);
+  	}
+  	if (!dockapp_xpm2pixmap(parts_xpm, &bat_parts, &mask, colors, ncolor)) {
+  	  fprintf(stderr, "Error initializing parts image.\n");
+  	  exit(1);
+		}
+	}
+
+	parts = &ac_parts;
 
   /* shape window */
   if (!dockapp_iswindowed) dockapp_setshape(mask, 0, 0);
@@ -553,7 +596,7 @@ int init_stats(AcpiInfos *k) {
     (*(rateElements+history_size-1)).rate[i] = k->rate[i];    
   }
   free(buf);
-  k->ac_line_status = 0;
+  k->ac_line_status = 1;
   k->battery_status[0] = 0;
   k->battery_percentage[0] = 0;
   k->remain[0] = 0;
@@ -683,6 +726,10 @@ static void parse_config_file(char *config){
 				use_proc=1;
 			}
 
+	    if(!strcmp(item,"use-bat-color")){
+				use_bat_colors=1;
+			}
+
 	    if(!strcmp(item,"dell")){
 				has_i8k=1;
 			}
@@ -714,6 +761,30 @@ static void parse_config_file(char *config){
 	    
 	    if(!strcmp(item,"sign-color")){
 	      strcpy(sign_color,value);
+	    }
+
+	    if(!strcmp(item,"bat-lightcolor")){
+	      strcpy(bat_light_color,value);
+	    }
+	    
+	    if(!strcmp(item,"bat-sign-light-color")){
+	      strcpy(bat_sign_light_color,value);
+	    }
+	    
+	    if(!strcmp(item,"bat-foreground-color")){
+	      strcpy(bat_foreground_color,value);
+	    }
+	    
+	    if(!strcmp(item,"bat-backlight-foreground-color")){
+	      strcpy(bat_foreground_b_color,value); 
+	    }
+	    
+	    if(!strcmp(item,"bat-background-color")){
+	      strcpy(bat_background_color,value);
+	    }
+	    
+	    if(!strcmp(item,"bat-sign-color")){
+	      strcpy(bat_sign_color,value);
 	    }
 
 	    if(!strcmp(item,"acpi_temperature")){
@@ -812,6 +883,23 @@ static void parse_config_file(char *config){
 	      strcpy(sysfs_cpu_speed,value);
 	    }
 
+	    if(!strcmp(item,"notify")){
+  			notif_cmd=(char *)malloc(sizeof(char)*512);
+	      strcpy(notif_cmd,value);
+	    }
+
+	    if(!strcmp(item,"on-ac")){
+  			on_ac_cmd=(char *)malloc(sizeof(char)*512);
+				printf("DEBUG: on_ac_cmd='%s'\n", value);
+	      strcpy(on_ac_cmd,value);
+				printf("DEBUG2: on_ac_cmd='%s'\n", on_ac_cmd);
+	    }
+
+	    if(!strcmp(item,"on-bat")){
+  			on_bat_cmd=(char *)malloc(sizeof(char)*512);
+	      strcpy(on_bat_cmd,value);
+	    }
+
 
 
 	    if(!strcmp(item,"updateinterval")){
@@ -897,10 +985,18 @@ static void draw_all(){
   long allremain=0;
   long allcapacity=0;
   /* all clear */
-  if (backlight == LIGHTON) 
-    dockapp_copyarea(backdrop_on, pixmap, 0, 0, 58, 58, 0, 0);
+  if (backlight == LIGHTON)
+	 	if (use_bat_colors && !cur_acpi_infos.ac_line_status){
+    	dockapp_copyarea(bat_backdrop_on, pixmap, 0, 0, 58, 58, 0, 0);
+		} else {
+    	dockapp_copyarea(backdrop_on, pixmap, 0, 0, 58, 58, 0, 0);
+		}
   else 
-    dockapp_copyarea(backdrop_off, pixmap, 0, 0, 58, 58, 0, 0);
+	 	if (use_bat_colors && !cur_acpi_infos.ac_line_status){
+    	dockapp_copyarea(bat_backdrop_off, pixmap, 0, 0, 58, 58, 0, 0);
+		} else {
+    	dockapp_copyarea(backdrop_off, pixmap, 0, 0, 58, 58, 0, 0);
+		}
   /* draw digit */
   draw_remaining_time(cur_acpi_infos);
   switch (mode) {
@@ -944,11 +1040,19 @@ static void switch_light() {
   switch (backlight) {
   case LIGHTOFF:
     backlight = LIGHTON;
-    dockapp_copyarea(backdrop_on, pixmap, 0, 0, 58, 58, 0, 0);
+	 	if (use_bat_colors && !cur_acpi_infos.ac_line_status){
+    	dockapp_copyarea(bat_backdrop_on, pixmap, 0, 0, 58, 58, 0, 0);
+		} else {
+    	dockapp_copyarea(backdrop_on, pixmap, 0, 0, 58, 58, 0, 0);
+		}
     break;
   case LIGHTON:
     backlight = LIGHTOFF;
-    dockapp_copyarea(backdrop_off, pixmap, 0, 0, 58, 58, 0, 0);
+	 	if (use_bat_colors && !cur_acpi_infos.ac_line_status){
+    	dockapp_copyarea(bat_backdrop_off, pixmap, 0, 0, 58, 58, 0, 0);
+		} else {
+    	dockapp_copyarea(backdrop_off, pixmap, 0, 0, 58, 58, 0, 0);
+		}
     break;
   }
 
@@ -972,7 +1076,7 @@ static void draw_batt(AcpiInfos infos){
   if (backlight == LIGHTON) y = 28;
   if (number_of_batteries) for(i=0;i<number_of_batteries;i++){
     if(infos.battery_status[i]==DISCHARGING){	
-      dockapp_copyarea(parts, pixmap,33+y , 63, 9, 5, 16+i*11, 39);
+      dockapp_copyarea(*parts, pixmap, 33+y , 63, 9, 5, 16+i*11, 39);
     }
   }
 }
@@ -981,14 +1085,13 @@ static void draw_remaining_time(AcpiInfos infos) {
   int y = 0;
   if (backlight == LIGHTON) y = 20;
   if (infos.ac_line_status == 1 && !(cur_acpi_infos.rate[0] || cur_acpi_infos.rate[1])){
-    dockapp_copyarea(parts, pixmap, 0, 68+68+y, 10, 20,  17, 5);
-    dockapp_copyarea(parts, pixmap, 10, 68+68+y, 10, 20,  32, 5);
+    dockapp_copyarea(*parts, pixmap, 0, 68+68+y, 10, 20,  17, 5);
+    dockapp_copyarea(*parts, pixmap, 10, 68+68+y, 10, 20,  32, 5);
   } else {
-
-    dockapp_copyarea(parts, pixmap, (infos.hours_left / 10) * 10, 68+y, 10, 20,  5, 5);
-    dockapp_copyarea(parts, pixmap, (infos.hours_left % 10) * 10, 68+y, 10, 20, 17, 5);
-    dockapp_copyarea(parts, pixmap, (infos.minutes_left / 10)  * 10, 68+y, 10, 20, 32, 5);
-    dockapp_copyarea(parts, pixmap, (infos.minutes_left % 10)  * 10, 68+y, 10, 20, 44, 5);
+    dockapp_copyarea(*parts, pixmap, (infos.hours_left / 10) * 10, 68+y, 10, 20,  5, 5);
+    dockapp_copyarea(*parts, pixmap, (infos.hours_left % 10) * 10, 68+y, 10, 20, 17, 5);
+    dockapp_copyarea(*parts, pixmap, (infos.minutes_left / 10)  * 10, 68+y, 10, 20, 32, 5);
+    dockapp_copyarea(*parts, pixmap, (infos.minutes_left % 10)  * 10, 68+y, 10, 20, 44, 5);
   }
 
 }
@@ -996,7 +1099,7 @@ static void draw_remaining_time(AcpiInfos infos) {
 static void draw_low() {
   int y = 0;
   if (backlight == LIGHTON) y = 28;
-  dockapp_copyarea(parts, pixmap,42+y , 58, 17, 7, 38, 38);
+  dockapp_copyarea(*parts, pixmap,42+y , 58, 17, 7, 38, 38);
 
 }
 
@@ -1010,13 +1113,13 @@ static void draw_temp(AcpiInfos infos) {
   }
 
   if (temp < 0 || temp>199)  temp = 0;
-  if (temp > 99) dockapp_copyarea(parts, pixmap, ((temp/100)%10)*5 + light_offset, 40, 5, 9, 17, 46);
-  dockapp_copyarea(parts, pixmap, ((temp/10)%10)*5 + light_offset, 40, 5, 9, 23, 46);
-  dockapp_copyarea(parts, pixmap, (temp%10)*5 + light_offset, 40, 5, 9, 29, 46);
+  if (temp > 99) dockapp_copyarea(*parts, pixmap, ((temp/100)%10)*5 + light_offset, 40, 5, 9, 17, 46);
+  dockapp_copyarea(*parts, pixmap, ((temp/10)%10)*5 + light_offset, 40, 5, 9, 23, 46);
+  dockapp_copyarea(*parts, pixmap, (temp%10)*5 + light_offset, 40, 5, 9, 29, 46);
 
-  dockapp_copyarea(parts, pixmap, 10 + light_offset, 49, 5, 9, 36, 46);  //o
-  dockapp_copyarea(parts, pixmap, 15 + light_offset, 49, 5, 9, 42, 46);  //C
-  dockapp_copyarea(parts, pixmap, 35 + light_offset, 49, 5, 9, 48, 46);  //c
+  dockapp_copyarea(*parts, pixmap, 10 + light_offset, 49, 5, 9, 36, 46);  //o
+  dockapp_copyarea(*parts, pixmap, 15 + light_offset, 49, 5, 9, 42, 46);  //C
+  dockapp_copyarea(*parts, pixmap, 35 + light_offset, 49, 5, 9, 48, 46);  //c
 
 }
 
@@ -1028,13 +1131,13 @@ static void draw_vtemp(AcpiInfos infos) {
   }
 
   if (temp < 0 || temp>199)  temp = 0;
-  if (temp > 99) dockapp_copyarea(parts, pixmap, ((temp/100)%10)*5 + light_offset, 40, 5, 9, 17, 46);
-  dockapp_copyarea(parts, pixmap, ((temp/10)%10)*5 + light_offset, 40, 5, 9, 23, 46);
-  dockapp_copyarea(parts, pixmap, (temp%10)*5 + light_offset, 40, 5, 9, 29, 46);
+  if (temp > 99) dockapp_copyarea(*parts, pixmap, ((temp/100)%10)*5 + light_offset, 40, 5, 9, 17, 46);
+  dockapp_copyarea(*parts, pixmap, ((temp/10)%10)*5 + light_offset, 40, 5, 9, 23, 46);
+  dockapp_copyarea(*parts, pixmap, (temp%10)*5 + light_offset, 40, 5, 9, 29, 46);
 
-  dockapp_copyarea(parts, pixmap, 10 + light_offset, 49, 5, 9, 36, 46);  //o
-  dockapp_copyarea(parts, pixmap, 15 + light_offset, 49, 5, 9, 42, 46);  //C
-  dockapp_copyarea(parts, pixmap, 40 + light_offset, 49, 5, 9, 48, 46);  //v
+  dockapp_copyarea(*parts, pixmap, 10 + light_offset, 49, 5, 9, 36, 46);  //o
+  dockapp_copyarea(*parts, pixmap, 15 + light_offset, 49, 5, 9, 42, 46);  //C
+  dockapp_copyarea(*parts, pixmap, 40 + light_offset, 49, 5, 9, 48, 46);  //v
 
 }
 
@@ -1046,13 +1149,13 @@ static void draw_mtemp(AcpiInfos infos) {
   }
 
   if (temp < 0 || temp>199)  temp = 0;
-  if (temp > 99) dockapp_copyarea(parts, pixmap, ((temp/100)%10)*5 + light_offset, 40, 5, 9, 17, 46);
-  dockapp_copyarea(parts, pixmap, ((temp/10)%10)*5 + light_offset, 40, 5, 9, 23, 46);
-  dockapp_copyarea(parts, pixmap, (temp%10)*5 + light_offset, 40, 5, 9, 29, 46);
+  if (temp > 99) dockapp_copyarea(*parts, pixmap, ((temp/100)%10)*5 + light_offset, 40, 5, 9, 17, 46);
+  dockapp_copyarea(*parts, pixmap, ((temp/10)%10)*5 + light_offset, 40, 5, 9, 23, 46);
+  dockapp_copyarea(*parts, pixmap, (temp%10)*5 + light_offset, 40, 5, 9, 29, 46);
 
-  dockapp_copyarea(parts, pixmap, 10 + light_offset, 49, 5, 9, 36, 46);  //o
-  dockapp_copyarea(parts, pixmap, 15 + light_offset, 49, 5, 9, 42, 46);  //C
-  dockapp_copyarea(parts, pixmap, 45 + light_offset, 49, 5, 9, 48, 46);  //m
+  dockapp_copyarea(*parts, pixmap, 10 + light_offset, 49, 5, 9, 36, 46);  //o
+  dockapp_copyarea(*parts, pixmap, 15 + light_offset, 49, 5, 9, 42, 46);  //C
+  dockapp_copyarea(*parts, pixmap, 45 + light_offset, 49, 5, 9, 48, 46);  //m
 
 }
 static void blink_batt(){
@@ -1064,7 +1167,7 @@ static void blink_batt(){
   blink_pos=(blink_pos+1)%5;
   if (number_of_batteries) for(bat=0;bat<number_of_batteries;bat++){
     if(cur_acpi_infos.battery_status[bat]==CHARGING){
-      dockapp_copyarea(parts, pixmap, blink_pos*9+light_offset , 117, 9, 5,  16+bat*11, 39);
+      dockapp_copyarea(*parts, pixmap, blink_pos*9+light_offset , 117, 9, 5,  16+bat*11, 39);
     }
   }    
 }
@@ -1076,7 +1179,7 @@ static void draw_statusdigit(AcpiInfos infos) {
     light_offset=28;
   }
   if (infos.ac_line_status == 1){
-    dockapp_copyarea(parts, pixmap,33+light_offset , 58, 9, 5, 5, 39);
+    dockapp_copyarea(*parts, pixmap,33+light_offset , 58, 9, 5, 5, 39);
   }
 }
 
@@ -1087,14 +1190,14 @@ static void draw_rate(AcpiInfos infos) {
     light_offset=50;
   }
 
-  if (rate > 9999) dockapp_copyarea(parts, pixmap, (rate/10000)*5 + light_offset, 40, 5, 9, 5, 46);
-  if (rate > 999) dockapp_copyarea(parts, pixmap, ((rate/1000)%10)*5 + light_offset, 40, 5, 9, 11, 46);
-  if (rate > 99) dockapp_copyarea(parts, pixmap, ((rate/100)%10)*5 + light_offset, 40, 5, 9, 17, 46);
-  if (rate > 9) dockapp_copyarea(parts, pixmap, ((rate/10)%10)*5 + light_offset, 40, 5, 9, 23, 46);
-  dockapp_copyarea(parts, pixmap, (rate%10)*5 + light_offset, 40, 5, 9, 29, 46);
+  if (rate > 9999) dockapp_copyarea(*parts, pixmap, (rate/10000)*5 + light_offset, 40, 5, 9, 5, 46);
+  if (rate > 999) dockapp_copyarea(*parts, pixmap, ((rate/1000)%10)*5 + light_offset, 40, 5, 9, 11, 46);
+  if (rate > 99) dockapp_copyarea(*parts, pixmap, ((rate/100)%10)*5 + light_offset, 40, 5, 9, 17, 46);
+  if (rate > 9) dockapp_copyarea(*parts, pixmap, ((rate/10)%10)*5 + light_offset, 40, 5, 9, 23, 46);
+  dockapp_copyarea(*parts, pixmap, (rate%10)*5 + light_offset, 40, 5, 9, 29, 46);
 
-  dockapp_copyarea(parts, pixmap, 0 + light_offset, 49, 5, 9, 36, 46);  //m
-  dockapp_copyarea(parts, pixmap, 5 + light_offset, 49, 5, 9, 42, 46);  //W
+  dockapp_copyarea(*parts, pixmap, 0 + light_offset, 49, 5, 9, 36, 46);  //m
+  dockapp_copyarea(*parts, pixmap, 5 + light_offset, 49, 5, 9, 42, 46);  //W
 
 }
 
@@ -1105,14 +1208,14 @@ static void draw_speed(AcpiInfos infos) {
     light_offset=50;
   }
 
-  if (rate > 999 ) dockapp_copyarea(parts, pixmap, ((rate/1000)%10)*5 + light_offset, 40, 5, 9, 11, 46);
-  if (rate > 99 ) dockapp_copyarea(parts, pixmap, ((rate/100)%10)*5 + light_offset, 40, 5, 9, 17, 46);
-  if (rate > 9 ) dockapp_copyarea(parts, pixmap, ((rate/10)%10)*5 + light_offset, 40, 5, 9, 23, 46);
-  dockapp_copyarea(parts, pixmap, (rate%10)*5 + light_offset, 40, 5, 9, 29, 46);
+  if (rate > 999 ) dockapp_copyarea(*parts, pixmap, ((rate/1000)%10)*5 + light_offset, 40, 5, 9, 11, 46);
+  if (rate > 99 ) dockapp_copyarea(*parts, pixmap, ((rate/100)%10)*5 + light_offset, 40, 5, 9, 17, 46);
+  if (rate > 9 ) dockapp_copyarea(*parts, pixmap, ((rate/10)%10)*5 + light_offset, 40, 5, 9, 23, 46);
+  dockapp_copyarea(*parts, pixmap, (rate%10)*5 + light_offset, 40, 5, 9, 29, 46);
 
-  dockapp_copyarea(parts, pixmap, 20 + light_offset, 49, 5, 9, 36, 46);  //M
-  dockapp_copyarea(parts, pixmap, 25 + light_offset, 49, 5, 9, 42, 46);  //H
-  dockapp_copyarea(parts, pixmap, 30 + light_offset, 49, 5, 9, 48, 46);  //z
+  dockapp_copyarea(*parts, pixmap, 20 + light_offset, 49, 5, 9, 36, 46);  //M
+  dockapp_copyarea(*parts, pixmap, 25 + light_offset, 49, 5, 9, 42, 46);  //H
+  dockapp_copyarea(*parts, pixmap, 30 + light_offset, 49, 5, 9, 48, 46);  //z
 
 }
 
@@ -1133,14 +1236,14 @@ static void draw_pcgraph(AcpiInfos infos) {
   	percentage/=number_of_batteries;
 	}
 		else percentage=0;
-    dockapp_copyarea(parts, pixmap, 0, 58+light_offset, width, 5, 4, 26);
+    dockapp_copyarea(*parts, pixmap, 0, 58+light_offset, width, 5, 4, 26);
     if(percentage == 100){ // don't display leading 0
-    	dockapp_copyarea(parts, pixmap, 4*(percentage/100), 126+light_offset, 3, 5, 37, 26);
+    	dockapp_copyarea(*parts, pixmap, 4*(percentage/100), 126+light_offset, 3, 5, 37, 26);
     }
     if(percentage > 9){ //don't display leading 0
-     dockapp_copyarea(parts, pixmap, 4*((percentage%100)/10), 126+light_offset, 3, 5, 41, 26);
+     dockapp_copyarea(*parts, pixmap, 4*((percentage%100)/10), 126+light_offset, 3, 5, 41, 26);
     }
-	dockapp_copyarea(parts, pixmap, 4*(percentage%10), 126+light_offset, 3, 5, 45, 26);		
+	dockapp_copyarea(*parts, pixmap, 4*(percentage%10), 126+light_offset, 3, 5, 45, 26);		
 }
 
 static void draw_fan(AcpiInfos infos) {
@@ -1154,23 +1257,23 @@ static void draw_fan(AcpiInfos infos) {
 	{
 		height=1;
   	width=infos.ibm_fan2 * 30 / 6000;
-    if (width < 31 ) dockapp_copyarea(parts, pixmap, 0, 58+light_offset, width, height, 4, 35);
+    if (width < 31 ) dockapp_copyarea(*parts, pixmap, 0, 58+light_offset, width, height, 4, 35);
 	}
   width=infos.ibm_fan * 30 / 6000;
-    if (width < 31 ) dockapp_copyarea(parts, pixmap, 0, 58+light_offset, width, height, 4, 33);
+    if (width < 31 ) dockapp_copyarea(*parts, pixmap, 0, 58+light_offset, width, height, 4, 33);
   if (backlight == LIGHTON) {
     light_offset=50;
   }
     if(infos.ibm_fan > 999 ){ // don't display leading 0
-      dockapp_copyarea(parts, pixmap, 5*(infos.ibm_fan/1000)+light_offset, 176, 4, 5, 36, 32);
+      dockapp_copyarea(*parts, pixmap, 5*(infos.ibm_fan/1000)+light_offset, 176, 4, 5, 36, 32);
     }
     if(infos.ibm_fan > 99){ //don't display leading 0
-      dockapp_copyarea(parts, pixmap, 5*((infos.ibm_fan%1000)/100)+light_offset, 176, 4, 5, 41, 32);
+      dockapp_copyarea(*parts, pixmap, 5*((infos.ibm_fan%1000)/100)+light_offset, 176, 4, 5, 41, 32);
     }
     if(infos.ibm_fan > 9){ //don't display leading 0
-      dockapp_copyarea(parts, pixmap, 5*((infos.ibm_fan%100)/10)+light_offset, 176, 4, 5, 46, 32);
+      dockapp_copyarea(*parts, pixmap, 5*((infos.ibm_fan%100)/10)+light_offset, 176, 4, 5, 46, 32);
     }
-    dockapp_copyarea(parts, pixmap, 5*(infos.ibm_fan%10)+light_offset, 176, 4, 5, 51, 32);		
+    dockapp_copyarea(*parts, pixmap, 5*(infos.ibm_fan%10)+light_offset, 176, 4, 5, 51, 32);		
 }
 
 static void parse_arguments(int argc, char **argv) {
@@ -1198,6 +1301,8 @@ static void parse_arguments(int argc, char **argv) {
       backlight = LIGHTON;
     } else if (!strcmp(argv[i], "--use-proc"))  {
       use_proc = 1;
+    } else if (!strcmp(argv[i], "--use-bat-color") || !strcmp(argv[i], "-sc")) {
+      use_bat_colors = 1;
     } else if (!strcmp(argv[i], "--light-color") || !strcmp(argv[i], "-lc")) {
       strcpy(light_color,argv[i + 1]);
       i++;
@@ -1215,6 +1320,24 @@ static void parse_arguments(int argc, char **argv) {
       i++;
     } else if (!strcmp(argv[i], "--sign-color") || !strcmp(argv[i], "-sc")) {
       strcpy(sign_color,argv[i + 1]);
+      i++;
+    } else if (!strcmp(argv[i], "--bat-light-color") || !strcmp(argv[i], "-lb")) {
+      strcpy(bat_light_color,argv[i + 1]);
+      i++;
+    } else if (!strcmp(argv[i], "--bat-sign-light-color") || !strcmp(argv[i], "-nb")) {
+      strcpy(bat_sign_light_color,argv[i + 1]);
+      i++;
+    } else if (!strcmp(argv[i], "--bat-foreground-color") || !strcmp(argv[i], "-fb")) {
+      strcpy(bat_foreground_color,argv[i + 1]);
+      i++;
+    } else if (!strcmp(argv[i], "--bat-backlight-foreground-color") || !strcmp(argv[i], "-rb")) {
+      strcpy(bat_foreground_b_color,argv[i + 1]);
+      i++;
+    } else if (!strcmp(argv[i], "--bat-background-color") || !strcmp(argv[i], "-bb")) {
+      strcpy(bat_background_color,argv[i + 1]);
+      i++;
+    } else if (!strcmp(argv[i], "--bat-sign-color") || !strcmp(argv[i], "-sb")) {
+      strcpy(bat_sign_color,argv[i + 1]);
       i++;
     } else if (!strcmp(argv[i], "--config") || !strcmp(argv[i], "-c")) {
       config_file = argv[i + 1];
@@ -1262,6 +1385,12 @@ static void parse_arguments(int argc, char **argv) {
     } else if (!strcmp(argv[i], "--notify") || !strcmp(argv[i], "-n")) {
       notif_cmd = argv[i + 1];
       i++;
+    } else if (!strcmp(argv[i], "--on-bat") || !strcmp(argv[i], "-ob")) {
+      on_bat_cmd = argv[i + 1];
+      i++;
+    } else if (!strcmp(argv[i], "--on-ac") || !strcmp(argv[i], "-oa")) {
+      on_ac_cmd = argv[i + 1];
+      i++;
     } else if (!strcmp(argv[i], "--thermal_file") || !strcmp(argv[i], "-tc")) {
       strncpy(sysfs_thermal, argv[i + 1], sizeof(argv[i + 1]));
       i++;
@@ -1270,9 +1399,6 @@ static void parse_arguments(int argc, char **argv) {
       i++;
     } else if (!strcmp(argv[i], "--thermal_mb_file") || !strcmp(argv[i], "-tm")) {
       strncpy(sysfs_thermal_m, argv[i + 1], sizeof(argv[i + 1]));
-      i++;
-    } else if (!strcmp(argv[i], "--suspend") || !strcmp(argv[i], "-s")) {
-      suspend_cmd = argv[i + 1];
       i++;
     } else if (!strcmp(argv[i], "--togglespeed") || !strcmp(argv[i], "-ts")) {
       if (argc == i + 1)
@@ -1327,9 +1453,6 @@ static void parse_arguments(int argc, char **argv) {
       else if(character=='m') mode=TEMP_M;	
       else if(character=='p') mode=PERF;	
       i++;
-    } else if (!strcmp(argv[i], "--standby") || !strcmp(argv[i], "-S")) {
-      standby_cmd = argv[i + 1];
-      i++;
     } else {
       fprintf(stderr, "%s: unrecognized option '%s'\n", argv[0], argv[i]);
       print_help(argv[0]), exit(1);
@@ -1341,28 +1464,35 @@ static void parse_arguments(int argc, char **argv) {
 static void print_help(char *prog)
 {
   printf("Usage : %s [OPTIONS]\n"
-	 "%s - Window Maker Lenovo hardware monitor dockapp\n"
+	 "%s - Window Maker Lenovo / Dell hardware monitor dockapp\n"
 	 "  -d,  --display <string>        	display to use\n"
 	 "  -bl, --backlight               	turn on back-light\n"
+	 "  -cs  --use-bat-color			use separate color scheme when on BAT power\n"  
 	 "Note: Possible color notations are name (red), rgb (rgb:FF/00/00) or web in quotation marks (\"#ff0000\")!\n"
-	 "  -lc, --light-color <string>    	back-light color(rgb:FF/99/99 is default)\n"
-	 "  -nc, --sign-light-color <string>	back-light color for signs(rgb:AA/77/77 is default)\n"
-	 "  -bc, --background-color <string>	background color(rgb:22/22/22 is default)\n"
-	 "  -fc, --foreground-color <string>	foreground color(rgb:FF/00/00 is default)\n"
-	 "  -rc, --backlight-foreground-color <string>	foreground color for backlight (rgb:FF/00/00 is default)\n"
-	 "  -sc, --sign-color <string>    	sign color(rgb:77/22/22 is default)\n"
+	 "  -lc, --light-color <string>    	back-light color (rgb:FF/AA/00 is default)\n"
+	 "  -nc, --sign-light-color <string>	back-light color for signs (rgb:99/66/33 is default)\n"
+	 "  -bc, --background-color <string>	background color (rgb:22/22/22 is default)\n"
+	 "  -fc, --foreground-color <string>	foreground color (rgb:00/FF/00 is default)\n"
+	 "  -rc, --backlight-foreground-color <string>	foreground color for backlight (rgb:AA/00/00 is default)\n"
+	 "  -sc, --sign-color <string>    	sign color (rgb:22/77/22 is default)\n"
+	 "  -lb, --bat-light-color <string>    	back-light color when on BAT and -cs is set (rgb:FF/99/99 is default)\n"
+	 "  -nb, --bat-sign-light-color <string>	back-light color for signs when on BAT and -cs is set (rgb:AA/77/77 is default)\n"
+	 "  -bb, --bat-background-color <string>	background color when on BAT and -cs is set (rgb:22/22/22 is default)\n"
+	 "  -fb, --bat-foreground-color <string>	foreground color when on BAT and -cs is set  (rgb:FF/00/00 is default)\n"
+	 "  -rb, --bat-backlight-foreground-color <string>	foreground color for backlight when on BAT and -cs is set (rgb:FF/00/00 is default)\n"
+	 "  -sb, --bat-sign-color <string>    	sign color when on BAT and -cs is set (rgb:77/22/22 is default)\n"
 	 "  -c,  --config <string>         	set filename of config file\n"
 	 "  -i,  --interval <number>       	number of secs between updates (1 is default)\n"
 	 "  -a,  --alarm <number>          	low battery level to raise alarm\n"
 	 "  -at,  --alarm-term <number>    	CPU temperature to raise alarm\n"
-	 "                                 	(20 is default)\n"
+	 "                                 	(90 is default)\n"
 	 "  -h,  --help                    	show this help text and exit\n"
 	 "  -v,  --version                 	show program version and exit\n"
 	 "  -w,  --windowed                	run the application in windowed mode\n"
 	 "  -bw, --broken-wm               	activate broken window manager fix\n"
 	 "  -n,  --notify <string>         	command to launch in case of alarm is on\n"
-	 "  -s,  --suspend <string>        	set command for acpi suspend\n"
-	 "  -S,  --standby <string>        	set command for acpi standby\n"
+	 "  -ob,  --on-bat <string>         	command to launch during laptop's switching to BAT power\n"
+	 "  -oa,  --on-ac <string>         	command to launch during laptop's switching to AC power\n"
 	 "  -m,  --mode [t|r|v|m|p|s]      	set mode for the lower row , \n"
 	 "                                 	t=CPU temperature,r=current rate,\n"
 	 "                                 	v=GPU temperature, m=motherboard temperature,\n"
@@ -1502,8 +1632,22 @@ int acpi_read(AcpiInfos *i) {
     bzero(buf, 512);
     fscanf(fd, "state: %s", buf);
     fclose(fd);
-    if(strstr(buf, "on-line") != NULL) i->ac_line_status=1;
-    if(strstr(buf, "off-line") != NULL) i->ac_line_status=0;
+    if(strstr(buf, "on-line") != NULL) {
+  		if (!i->ac_line_status){
+				parts = &ac_parts;
+				printf("Firing on AC command\n");
+				my_system(on_ac_cmd);
+			}
+		 	i->ac_line_status=1;
+		}
+    if(strstr(buf, "off-line") != NULL) {
+			if (i->ac_line_status){
+				if (use_bat_colors) parts = &bat_parts;
+				printf("Firing on BAT command\n");
+				my_system(on_bat_cmd);
+			}
+			i->ac_line_status=0;
+		}
   }
   if (number_of_batteries) {	
 		for(bat=0;bat<number_of_batteries;bat++){
@@ -1783,9 +1927,10 @@ int sysfs_read(AcpiInfos *i) {
   long	allcapacity=0;
   long	allremain=0;
 	long	raw=0;
+	int		prev=1;
 
   rate = 0;
-  
+  prev = i->ac_line_status;
   
   DEBUGSTRING("sysfs_read()\n")
 
@@ -1815,6 +1960,16 @@ int sysfs_read(AcpiInfos *i) {
   		fclose(fd);
   		i->ibm_mtemp = raw / 1000;
   	}
+	}
+  if (prev && !i->ac_line_status){
+		if (use_bat_colors) parts = &bat_parts;
+		printf("Firing on BAT command\n");
+		my_system(on_bat_cmd);
+	}
+	else if (!prev && i->ac_line_status){
+		parts = &ac_parts;
+		printf("Firing on AC command\n");
+		my_system(on_ac_cmd);
 	}
   if (number_of_batteries) {	
 		for(bat=0;bat<number_of_batteries;bat++){

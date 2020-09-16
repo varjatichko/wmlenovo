@@ -1,11 +1,13 @@
 This software is reworked version of old wmlenovo and wmdell system health monitoring dock (NEXTStep/WindowMaker) applications. It's still based on wmbatteries code but added support of sysfs in addition to legacy /proc/acpi interface for both generic and Thinkpad platforms.
 
-Main changes compare to previous (0.1.6) version:
+Main changes compare to previous (0.1.6 and 0.1.7) versions:
  - Generic sysfs hardware monitoring support
  - IBM/Lenovo ThinkPad support via sysfs
  - Dell I8K support (via /proc/i8k)
  - Support of 2x fans for Dell platform (two gauges, numerical value is displayed for the first fan only)
- - Tunable file's pathes (via configuration file) 	
+ - Tunable file's pathes (via configuration file)
+ - Option to use separate color schemes for AC and BAT power
+ - Added ability to execute commands on alert and power source switching
  - Minor bugfixes
  
 Enjoy!

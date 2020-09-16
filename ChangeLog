@@ -52,3 +52,12 @@ wmlenovo 0.1.7
 	* Add Dell i8k support
 
  --  Alexey Ivaniuk <Varjat@GMail.com> Mon, 02 Dec 2019 12:23:17 +0300
+
+wmlenovo 0.1.8
+
+	* Add separate color scheme when on AC power
+	*	Add commands invocation when laptop changes power source (-oa and -ob
+			options)
+	* Minor clean up
+
+ --  Alexey Ivaniuk <Varjat@GMail.com> Fri, 11 Sep 2020 10:24:17 +0300

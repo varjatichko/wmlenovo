@@ -2,7 +2,7 @@
 .\" First parameter, NAME, should be all caps
 .\" Second parameter, SECTION, should be 1-8, maybe w/ subsection
 .\" other parameters are allowed: see man(7), man(1)
-.TH WMLENOVO 1 "December 3, 2019"
+.TH WMLENOVO 1 "September 16, 2020"
 .\" Please adjust this date whenever revising the manpage.
 .\"
 .\" Some roff macros, for reference:
@@ -29,7 +29,7 @@ command.
 .\" respectively.
 \fBwmlenovo\fP is a program to monitor status of one or two batteries cpu, gpu, motherboard temp, fan and cpu speed  using ACPI (
 .I http://acpi.sf.net
-) and functionality of thinkpad_acpi module. It is a dockapp that is supported by X window managers such as Window Maker, AfterStep, BlackBox, Fluxbox and Enlightenment.
+) or SYSFS and functionality of thinkpad_acpi (IBM/Lenovo) and i8k (Dell) modules. It is a dockapp that is supported by X window managers such as Window Maker, AfterStep, BlackBox, Fluxbox and Enlightenment.
 
 In the top half the sum of the remaining time of all existing batteries its displayed when the system runs in battery mode. Otherwise, the time is displayed, until the currently charging battery is complete charged. When on AC and the batteries are not charging, AC is displayed. Below, current capacity of availible batteries is displayed in percent and in form of bar. Another bar is displayed current fan speed.
 
@@ -38,7 +38,9 @@ corresponding battery is discharging, and animated if it is charging. The animat
 
 The last line may be used to display either CPU,GPU, Motherboard temperature or the current power consumption or current CPU speed. The mode of the last line may be set with the -m option. when -m s is given, the display switches between all modes in a certain time (option -ts). That line may also be switched manually by rightclicking in the dockapp.
 
-The back-light may be turned on/off by clicking the mouse button 1 (left) over the application. If battery status is below a critical level, an alarm-mode will alert you by turning on and off back-light. 
+The back-light may be turned on/off by clicking the mouse button 1 (left) over the application. If battery status is below a critical level, an alarm-mode will alert you by turning on and off back-light as long as by issuing an optional command.
+
+Separate commands can be issued during switching of power source from AC to BAT and back also.
 
 wmlenovo makes use of a config file which may be given via command line option ,$HOME/.wmlenovorc or /etc/wmlenovo, whichever comes first. An example may be found in the source distribution of wmlenovo.
 
@@ -56,23 +58,44 @@ environment variable is used.
 .B \-bl, \-\-backlight
 turn on back-light
 .TP
+.B \-sc, \-\-use\-bat\-color
+Use separate color schemes when laptop is on AC and on BAT (options prefixed with bat-) power
+.TP
 .B \-lc, \-\-light\-color <color>
 back-light background color (rgb:FF/99/99 is default)
 .TP
 .B \-nc, \-\-sign\-light\-color <color>
-signs back-light color (rgb:AA/77/77 is default)
-.TP
-.B \-fc, \-\-foreground\-color <color>
-foreground color (rgb:FF/00/00 is default)
+signs background back-light color (rgb:AA/77/77 is default)
 .TP
 .B \-rc, \-\-backlight\-foreground\-color <color>
 foreground color for backlight (rgb:FF/00/00 is default)
+.TP
+.B \-fc, \-\-foreground\-color <color>
+foreground color (rgb:FF/00/00 is default)
 .TP
 .B \-bc, \-\-background\-color <color>
 background color (rgb:22/22/22 is default)
 .TP
 .B \-sc, \-\-sign\-color <color>
-signs color (rgb:77/22/22 is default)
+signs background color (rgb:77/22/22 is default)
+.TP
+.B \-lb, \-\-bat\-light\-color <color>
+back-light background color for use during BAT power (rgb:FF/99/99 is default)
+.TP
+.B \-rb, \-\-bat\-backlight\-foreground\-color <color>
+foreground backlight color for use during BAT power (rgb:FF/00/00 is default)
+.TP
+.B \-nb, \-\-bat\-sign\-light\-color <color>
+signs back-light color for use during BAT power (rgb:AA/77/77 is default)
+.TP
+.B \-fb, \-\-bat\-foreground\-color <color>
+foreground color for use during BAT power (rgb:FF/00/00 is default)
+.TP
+.B \-bb, \-\-bat\-background\-color <color>
+background color for use during BAT power (rgb:22/22/22 is default)
+.TP
+.B \-sb, \-\-bat\-sign\-color <color>
+signs color for use during BAT power (rgb:77/22/22 is default)
 .TP
 .B \-i,  \-\-interval <number>
 number of secs between updates (1 is default)
