@@ -28,7 +28,6 @@
  *
  */
 
-//#define DEBUG 1
 
 #ifdef HAVE_CONFIG_H
 #include "config.h"
@@ -890,9 +889,7 @@ static void parse_config_file(char *config){
 
 	    if(!strcmp(item,"on-ac")){
   			on_ac_cmd=(char *)malloc(sizeof(char)*512);
-				printf("DEBUG: on_ac_cmd='%s'\n", value);
 	      strcpy(on_ac_cmd,value);
-				printf("DEBUG2: on_ac_cmd='%s'\n", on_ac_cmd);
 	    }
 
 	    if(!strcmp(item,"on-bat")){
