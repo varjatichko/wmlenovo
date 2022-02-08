@@ -1,33 +1,33 @@
 wmlenovo 0.0.1
 	* Initial release based on wmbatteries
 
- -- Alexey Ivaniuk <Varjat@GMail.com> Tue, 11 Nov 2008 23:22:00 +0200
+ -- Alexey Varjat <Varjat@GMail.com> Tue, 11 Nov 2008 23:22:00 +0200
 
 wmlenovo 0.1.1
 
 	* Added options for color customization
 
- -- Alexey Ivaniuk <Varjat@GMail.com> Wed, 25 Feb 2009 09:20:40 +0200
+ -- Alexey Varjat <Varjat@GMail.com> Wed, 25 Feb 2009 09:20:40 +0200
 
 wmlenovo 0.1.2
 
 	* Added note about color notations in documentation files.
 	* Fixed version number.
 
- -- Alexey Ivaniuk <Varjat@GMail.com> Wed, 25 Feb 2009 10:50:56 +0200
+ -- Alexey Varjat <Varjat@GMail.com> Wed, 25 Feb 2009 10:50:56 +0200
 
 wmlenovo 0.1.3
 
 	* Fixed exception when no batteries found.
 
- -- Alexey Ivaniuk <Varjat@GMail.com> Wed, 05 Mar 2009 14:56:37 +0200
+ -- Alexey Varjat <Varjat@GMail.com> Wed, 05 Mar 2009 14:56:37 +0200
 
 wmlenovo 0.1.4
 
 	* Separated foreground colors for backlight on and backlight off parts (-rc and
 	--backlight-foreground-color options has been added)
 
- -- Alexey Ivaniuk <Varjat@GMail.com> Sat, 07 Mar 2009 00:15:45 +0200
+ -- Alexey Varjat <Varjat@GMail.com> Sat, 07 Mar 2009 00:15:45 +0200
 
 wmlenovo 0.1.5
 
@@ -37,21 +37,21 @@ wmlenovo 0.1.5
 	* Fixed blink interval
 	* Fixed initial configuration for autotools
 
- -- Alexey Ivaniuk <Varjat@GMail.com> Tue, 26 Oct 2010 18:51:14 +0300
+ -- Alexey Varjat <Varjat@GMail.com> Tue, 26 Oct 2010 18:51:14 +0300
 
 wmlenovo 0.1.6
 
 	* Now it's work without battery
 	* Fixed short args for the -m option
 
- --  Alexey Ivaniuk <Varjat@GMail.com> Fri, 11 Mar 2011 16:16:00 +0200
+ --  Alexey Varjat <Varjat@GMail.com> Fri, 11 Mar 2011 16:16:00 +0200
 
 wmlenovo 0.1.7
 
 	* Add /sys support
 	* Add Dell i8k support
 
- --  Alexey Ivaniuk <Varjat@GMail.com> Mon, 02 Dec 2019 12:23:17 +0300
+ --  Alexey Varjat <Varjat@GMail.com> Mon, 02 Dec 2019 12:23:17 +0300
 
 wmlenovo 0.1.8
 
@@ -60,4 +60,16 @@ wmlenovo 0.1.8
 			options)
 	* Minor clean up
 
- --  Alexey Ivaniuk <Varjat@GMail.com> Fri, 11 Sep 2020 10:24:17 +0300
+ --  Alexey Varjat <Varjat@GMail.com> Fri, 11 Sep 2020 10:24:17 +0300
+
+ wmlenovo 0.1.9
+
+	* Added temperature reading of NVidia GPU via NVML interface
+	* Added alerting on GPU throttling for NVidia GPU
+	* Fixed an issue with reading some command line arguments
+	* Added handling of negative temperatures
+	* Minor clean up
+	* Minor bug fixing
+
+
+ --  Alexey Varjat <Varjat@GMail.com> Wed, 02 Feb 2022 19:54:46 +0300

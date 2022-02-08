@@ -1,6 +1,4 @@
 * charging is not linear, remaining time until battery is loaded is'nt shown
   correctly
 
-* Add support for SBS 
-
 * Add support for scalable application size 

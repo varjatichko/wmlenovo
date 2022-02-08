@@ -8,7 +8,9 @@ Main changes compare to previous (0.1.6 and 0.1.7) versions:
  - Tunable file's pathes (via configuration file)
  - Option to use separate color schemes for AC and BAT power
  - Added ability to execute commands on alert and power source switching
+ - Added support of libnvidia-ml to monitor NVidia GPU temperature and throttling
  - Minor bugfixes
+ - Minor cleanups
  
 Enjoy!
 

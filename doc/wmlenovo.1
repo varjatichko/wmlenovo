@@ -2,7 +2,7 @@
 .\" First parameter, NAME, should be all caps
 .\" Second parameter, SECTION, should be 1-8, maybe w/ subsection
 .\" other parameters are allowed: see man(7), man(1)
-.TH WMLENOVO 1 "September 16, 2020"
+.TH WMLENOVO 1 "February 8, 2022"
 .\" Please adjust this date whenever revising the manpage.
 .\"
 .\" Some roff macros, for reference:
@@ -17,7 +17,7 @@
 .\" for manpage-specific macros, see man(7)
 .SH NAME
 wmlenovo \- A dockapp to monitor status of up to 2 batteries, cpu, gpu,
-motherboard temp, fan and cpu speed on Lenovo laptops.
+motherboard temp, fan and cpu speed on Lenovo (and virtually on any) laptops.
 .SH DESCRIPTION
 This manual page documents briefly the
 .B wmlenovo
@@ -145,8 +145,14 @@ set speed for charging animation in msec
 .B \-hs,  \-\-historysize <integer>
 set size of history for calculating average power consumption rate
 .TP
-.B \-\-use-proc
-use depricated /proc interface instead of sysfs           
+.B \-\-use\-proc
+use depricated /proc interface instead of sysfs
+.TP
+.B \-\-use\-nvidia
+use proprietary NVidia API to get GPU temperature and optionaly alert on GPU throttling
+.TP
+.B \-\-alarm\-nvidia
+Raise alarm when GPU switches to throttling state. Require to enable \-\-use\-nvidia option.
 .SH AUTHOR
 .B wmlenovo
 was assembled by Aliaksei Varjat 

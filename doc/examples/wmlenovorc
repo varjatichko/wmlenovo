@@ -151,3 +151,7 @@ alarm_temp		= 	90
 # on-ac = <string> // Command to execute when laptop switched from BAT to AC back
 
 # on-bat = <string> // Command to execute when laptop switched to BAT power
+
+#use-nvidia
+
+#nvidia-alarm-on-throttling

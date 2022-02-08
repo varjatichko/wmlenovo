@@ -45,9 +45,16 @@
 
 #ifdef linux
 #include <sys/stat.h>
+#ifdef HAVE_NVML
+#include <nvml.h>
+#endif
 #endif
 
-#define WMLENOVO_VERSION "0.1.8"
+#ifdef VERSION
+#define WMLENOVO_VERSION VERSION
+#else
+#define WMLENOVO_VERSION "0.1.9"
+#endif
 
 #define FREE(data) {if (data) free (data); data = NULL;}
 
@@ -72,7 +79,12 @@
 #define TEMP 1
 #define TEMP_V 2
 #define TEMP_M 3
+#ifdef HAVE_NVML
+#define PERF 5
+#define TEMP_D 4
+#else
 #define PERF 4
+#endif
 
 #define NONE     0
 #define STATE_OK 1
@@ -107,6 +119,9 @@ typedef struct AcpiInfos {
   int					ibm_ctemp;
   int					ibm_vtemp;
   int					ibm_mtemp;
+#ifdef HAVE_NVML
+  int					ibm_dtemp;
+#endif
   int					ibm_fan;
   int					ibm_fan2;
   int					i8k_fan;
@@ -184,7 +199,13 @@ static char sysfs_cpu_speed[256]=SYS_CPU_PERF_FILE;
 static int      history_size      = RATE_HISTORY;
 static RateListElem *rateElements;
 static RateListElem *firstRateElem;
-static short int max_mode	 = 4;
+#ifdef HAVE_NVML
+static short int max_mode	 = 5;
+static short int use_nvml = 0;
+static short int alert_nvml = 0;
+#else
+	static short int max_mode	 = 4;
+#endif
 static short int has_ibm_fan = 1;
 static short int has_i8k = 0;
 static short int has_ibm_temp = 1;
@@ -221,8 +242,10 @@ static void draw_all();
 static void draw_fan();
 static void draw_vtemp(AcpiInfos infos);
 static void draw_mtemp(AcpiInfos infos);
+static void draw_dtemp(AcpiInfos infos);
 static void draw_speed(AcpiInfos infos);
 static void check_alarm();
+static void sig_handler(int s);
 
 static void debug(char *debug_string);
 #ifdef linux
@@ -238,6 +261,10 @@ int i8k_read(AcpiInfos *i);
 int sysfs_read(AcpiInfos *i);
 #endif
 
+#ifdef HAVE_NVML
+static void read_d_temp(AcpiInfos *i);
+#endif
+
 int count;
 int blink_pos=0;
 
@@ -245,6 +272,16 @@ int blink_pos=0;
 static void debug(char *debug_string){
   printf("DEBUG: %s\n",debug_string);
 }
+
+
+static void sig_handler(int s){
+	printf("Caught signal %d, terminating gracefully\n",s);
+#ifdef HAVE_NVML
+	nvmlShutdown();
+#endif
+	exit(0); 
+}
+
 
 int main(int argc, char **argv) {
 	
@@ -265,6 +302,12 @@ int main(int argc, char **argv) {
   sa.sa_flags = 0;
 #endif
 
+	struct sigaction sigIntHandler;
+	sigIntHandler.sa_handler = sig_handler;
+	sigemptyset(&sigIntHandler.sa_mask);
+	sigIntHandler.sa_flags = 0;
+
+
 
   printf("wmlenovo %s  (c) Alexey  Varjat\n"
          "<varjat@gmail.com>\n\n"
@@ -275,6 +318,9 @@ int main(int argc, char **argv) {
 
   sigemptyset(&sa.sa_mask);
   sigaction(SIGCHLD, &sa, NULL);
+	sigaction(SIGINT, &sigIntHandler, NULL);
+	sigaction(SIGTERM, &sigIntHandler, NULL);
+	sigaction(SIGQUIT, &sigIntHandler, NULL);
 
   /* Parse CommandLine */
   parse_arguments(argc, argv);
@@ -295,6 +341,19 @@ int main(int argc, char **argv) {
 	else {
 		has_i8k = 0;
 	}
+
+#ifdef HAVE_NVML
+	if (use_nvml) {
+		// Init libnvidia-ml
+		nvmlReturn_t res = nvmlInit_v2();
+		if (res){
+			printf("Unable to init NVML: %s\n",nvmlErrorString(res));
+			use_nvml = 0;
+		}
+	}
+
+#endif
+
   /* Initialize Application */
 
   init_stats(&cur_acpi_infos);
@@ -608,9 +667,12 @@ int init_stats(AcpiInfos *k) {
   k->ibm_fan2= 0;
   k->i8k_fan= -1;
   k->i8k_fan2= -1;
-  k->ibm_ctemp= 0;
-  k->ibm_mtemp= -1;
-  k->ibm_vtemp= -1;
+  k->ibm_ctemp= -1024;
+  k->ibm_mtemp= -1024;
+#ifdef HAVE_NVML
+  k->ibm_dtemp= -1024;
+#endif
+  k->ibm_vtemp= -1024;
   k->speed=0;
   DEBUGSTRING("end of init_stats()");
 }
@@ -652,6 +714,9 @@ static void update() {
 		  sysfs_speed_read(&cur_acpi_infos);
   	}
 	}
+#ifdef HAVE_NVML
+	read_d_temp(&cur_acpi_infos);
+#endif
 
   draw_all();
 }
@@ -665,7 +730,6 @@ static void parse_config_file(char *config){
   char line[256] ;
   char *item;
   char *value;
-  extern int errno;
   int linenr=0;
   int tmp;
   char *test;
@@ -896,6 +960,14 @@ static void parse_config_file(char *config){
   			on_bat_cmd=(char *)malloc(sizeof(char)*512);
 	      strcpy(on_bat_cmd,value);
 	    }
+#ifdef HAVE_NVML
+	    if(!strcmp(item,"use-nvidia")){
+				use_nvml=1;
+			}
+	    if(!strcmp(item,"nvidia-alarm-on-throttling")){
+				alert_nvml=1;
+			}
+#endif
 
 
 
@@ -954,13 +1026,21 @@ static void parse_config_file(char *config){
 	    }
 
 	    if(!strcmp(item,"mode")){
-	      if(strcmp(value,"rate") && strcmp(value,"toggle") && strcmp(value,"toggle")) {
+#ifdef HAVE_NVML
+	      if(strcmp(value,"rate") && strcmp(value,"toggle") && strcmp(value,"temp") && strcmp(value,"v_temp") && strcmp(value,"m_temp") && strcmp(value,"v_temp") && strcmp(value,"d_temp")) {
+		printf("mode must be one of rate,temp,v_temp,m_temp,d_temp,speed,toggle in line %i\n",linenr);
+#else
+	      if(strcmp(value,"rate") && strcmp(value,"toggle") && strcmp(value,"temp") && strcmp(value,"v_temp") && strcmp(value,"m_temp") && strcmp(value,"v_temp")) {
 		printf("mode must be one of rate,temp,v_temp,m_temp,speed,toggle in line %i\n",linenr);
+#endif
 	      } else { 
 		if(strcmp(value,"rate")) mode=RATE;
 		if(strcmp(value,"temp")) mode=TEMP;
 		if(strcmp(value,"v_temp")) mode=TEMP_V;
 		if(strcmp(value,"m_temp")) mode=TEMP_M;
+#ifdef HAVE_NVML
+		if(strcmp(value,"d_temp")) mode=TEMP_D;
+#endif
 		if(strcmp(value,"speed")) mode=PERF;
 		if(strcmp(value,"toggle")) togglemode=1;
 	      }
@@ -981,6 +1061,7 @@ static void draw_all(){
   int bat;
   long allremain=0;
   long allcapacity=0;
+
   /* all clear */
   if (backlight == LIGHTON)
 	 	if (use_bat_colors && !cur_acpi_infos.ac_line_status){
@@ -1004,17 +1085,25 @@ static void draw_all(){
 		draw_temp(cur_acpi_infos);
 		break;
 	case TEMP_V:
-		if (cur_acpi_infos.ibm_vtemp != -1) {
+		if (cur_acpi_infos.ibm_vtemp > -1024) {
 			draw_vtemp(cur_acpi_infos);
 			break;
 		}
 		mode++;
 	case TEMP_M:
-		if (cur_acpi_infos.ibm_mtemp != -1) {
+		if (cur_acpi_infos.ibm_mtemp > -1024) {
 			draw_mtemp(cur_acpi_infos);
 			break;
 		}
 		mode++;
+#ifdef HAVE_NVML
+	case TEMP_D:
+		if (use_nvml && cur_acpi_infos.ibm_dtemp > -1024) {
+			draw_dtemp(cur_acpi_infos);
+			break;
+		}
+		mode++;
+#endif
 	case PERF:
 		draw_speed(cur_acpi_infos);
 		break;
@@ -1090,34 +1179,32 @@ static void draw_remaining_time(AcpiInfos infos) {
     dockapp_copyarea(*parts, pixmap, (infos.minutes_left / 10)  * 10, 68+y, 10, 20, 32, 5);
     dockapp_copyarea(*parts, pixmap, (infos.minutes_left % 10)  * 10, 68+y, 10, 20, 44, 5);
   }
-
 }
 
 static void draw_low() {
   int y = 0;
   if (backlight == LIGHTON) y = 28;
   dockapp_copyarea(*parts, pixmap,42+y , 58, 17, 7, 38, 38);
-
 }
 
 static void draw_temp(AcpiInfos infos) {
   int temp = 0;
   int light_offset=0;
-  if (infos.ibm_ctemp > 0 ) temp = infos.ibm_ctemp;
+  if (infos.ibm_ctemp > -1024 ) temp = infos.ibm_ctemp;
 	  else temp = infos.thermal_temp;
   if (backlight == LIGHTON) {
     light_offset=50;
   }
 
-  if (temp < 0 || temp>199)  temp = 0;
+  if (temp < -99 || temp>199)  temp = 0;
+  if (temp < 0) dockapp_copyarea(*parts, pixmap, 95 + light_offset/10, 58, 5, 9, 17, 46);
   if (temp > 99) dockapp_copyarea(*parts, pixmap, ((temp/100)%10)*5 + light_offset, 40, 5, 9, 17, 46);
-  dockapp_copyarea(*parts, pixmap, ((temp/10)%10)*5 + light_offset, 40, 5, 9, 23, 46);
-  dockapp_copyarea(*parts, pixmap, (temp%10)*5 + light_offset, 40, 5, 9, 29, 46);
+  dockapp_copyarea(*parts, pixmap, ((abs(temp)/10)%10)*5 + light_offset, 40, 5, 9, 23, 46);
+  dockapp_copyarea(*parts, pixmap, (abs(temp)%10)*5 + light_offset, 40, 5, 9, 29, 46);
 
   dockapp_copyarea(*parts, pixmap, 10 + light_offset, 49, 5, 9, 36, 46);  //o
   dockapp_copyarea(*parts, pixmap, 15 + light_offset, 49, 5, 9, 42, 46);  //C
   dockapp_copyarea(*parts, pixmap, 35 + light_offset, 49, 5, 9, 48, 46);  //c
-
 }
 
 static void draw_vtemp(AcpiInfos infos) {
@@ -1127,15 +1214,15 @@ static void draw_vtemp(AcpiInfos infos) {
     light_offset=50;
   }
 
-  if (temp < 0 || temp>199)  temp = 0;
+  if (temp < -99 || temp>199)  temp = 0;
+  if (temp < 0) dockapp_copyarea(*parts, pixmap, 94 + light_offset/10, 58, 5, 9, 17, 46);
   if (temp > 99) dockapp_copyarea(*parts, pixmap, ((temp/100)%10)*5 + light_offset, 40, 5, 9, 17, 46);
-  dockapp_copyarea(*parts, pixmap, ((temp/10)%10)*5 + light_offset, 40, 5, 9, 23, 46);
-  dockapp_copyarea(*parts, pixmap, (temp%10)*5 + light_offset, 40, 5, 9, 29, 46);
+  dockapp_copyarea(*parts, pixmap, ((abs(temp)/10)%10)*5 + light_offset, 40, 5, 9, 23, 46);
+  dockapp_copyarea(*parts, pixmap, (abs(temp)%10)*5 + light_offset, 40, 5, 9, 29, 46);
 
   dockapp_copyarea(*parts, pixmap, 10 + light_offset, 49, 5, 9, 36, 46);  //o
   dockapp_copyarea(*parts, pixmap, 15 + light_offset, 49, 5, 9, 42, 46);  //C
   dockapp_copyarea(*parts, pixmap, 40 + light_offset, 49, 5, 9, 48, 46);  //v
-
 }
 
 static void draw_mtemp(AcpiInfos infos) {
@@ -1145,16 +1232,37 @@ static void draw_mtemp(AcpiInfos infos) {
     light_offset=50;
   }
 
-  if (temp < 0 || temp>199)  temp = 0;
+  if (temp < -99 || temp>199)  temp = 0;
+  if (temp < 0) dockapp_copyarea(*parts, pixmap, 94 + light_offset/10, 58, 5, 9, 17, 46);
   if (temp > 99) dockapp_copyarea(*parts, pixmap, ((temp/100)%10)*5 + light_offset, 40, 5, 9, 17, 46);
-  dockapp_copyarea(*parts, pixmap, ((temp/10)%10)*5 + light_offset, 40, 5, 9, 23, 46);
-  dockapp_copyarea(*parts, pixmap, (temp%10)*5 + light_offset, 40, 5, 9, 29, 46);
+  dockapp_copyarea(*parts, pixmap, ((abs(temp)/10)%10)*5 + light_offset, 40, 5, 9, 23, 46);
+  dockapp_copyarea(*parts, pixmap, (abs(temp)%10)*5 + light_offset, 40, 5, 9, 29, 46);
 
   dockapp_copyarea(*parts, pixmap, 10 + light_offset, 49, 5, 9, 36, 46);  //o
   dockapp_copyarea(*parts, pixmap, 15 + light_offset, 49, 5, 9, 42, 46);  //C
-  dockapp_copyarea(*parts, pixmap, 45 + light_offset, 49, 5, 9, 48, 46);  //m
-
+  dockapp_copyarea(*parts, pixmap, light_offset, 49, 5, 9, 48, 46);  //m
 }
+
+#ifdef HAVE_NVML
+static void draw_dtemp(AcpiInfos infos) {
+  int temp = infos.ibm_dtemp;
+  int light_offset=0;
+  if (backlight == LIGHTON) {
+    light_offset=50;
+  }
+
+  if (temp < -99 || temp>199)  temp = 0;
+  if (temp < 0) dockapp_copyarea(*parts, pixmap, 94 + light_offset/10, 58, 5, 9, 17, 46);
+  if (temp > 99) dockapp_copyarea(*parts, pixmap, ((temp/100)%10)*5 + light_offset, 40, 5, 9, 17, 46);
+  dockapp_copyarea(*parts, pixmap, ((abs(temp)/10)%10)*5 + light_offset, 40, 5, 9, 23, 46);
+  dockapp_copyarea(*parts, pixmap, (abs(temp)%10)*5 + light_offset, 40, 5, 9, 29, 46);
+
+  dockapp_copyarea(*parts, pixmap, 10 + light_offset, 49, 5, 9, 36, 46);  //o
+  dockapp_copyarea(*parts, pixmap, 15 + light_offset, 49, 5, 9, 42, 46);  //C
+  dockapp_copyarea(*parts, pixmap, 45 + light_offset, 49, 5, 9, 48, 46);  //d
+}
+#endif
+
 static void blink_batt(){
   int light_offset=0;
   int bat=0;
@@ -1298,6 +1406,12 @@ static void parse_arguments(int argc, char **argv) {
       backlight = LIGHTON;
     } else if (!strcmp(argv[i], "--use-proc"))  {
       use_proc = 1;
+#ifdef HAVE_NVML
+    } else if (!strcmp(argv[i], "--use-nvidia"))  {
+      use_nvml = 1;
+    } else if (!strcmp(argv[i], "--alarm-nvidia"))  {
+      alert_nvml = 1;
+#endif
     } else if (!strcmp(argv[i], "--use-bat-color") || !strcmp(argv[i], "-sc")) {
       use_bat_colors = 1;
     } else if (!strcmp(argv[i], "--light-color") || !strcmp(argv[i], "-lc")) {
@@ -1389,13 +1503,13 @@ static void parse_arguments(int argc, char **argv) {
       on_ac_cmd = argv[i + 1];
       i++;
     } else if (!strcmp(argv[i], "--thermal_file") || !strcmp(argv[i], "-tc")) {
-      strncpy(sysfs_thermal, argv[i + 1], sizeof(argv[i + 1]));
+      strncpy(sysfs_thermal, argv[i + 1], 255);
       i++;
     } else if (!strcmp(argv[i], "--thermal_video_file") || !strcmp(argv[i], "-tv")) {
-      strncpy(sysfs_thermal_v, argv[i + 1], sizeof(argv[i + 1]));
+      strncpy(sysfs_thermal_v, argv[i + 1], 255);
       i++;
     } else if (!strcmp(argv[i], "--thermal_mb_file") || !strcmp(argv[i], "-tm")) {
-      strncpy(sysfs_thermal_m, argv[i + 1], sizeof(argv[i + 1]));
+      strncpy(sysfs_thermal_m, argv[i + 1], 255);
       i++;
     } else if (!strcmp(argv[i], "--togglespeed") || !strcmp(argv[i], "-ts")) {
       if (argc == i + 1)
@@ -1440,14 +1554,23 @@ static void parse_arguments(int argc, char **argv) {
       if (sscanf(argv[i + 1], "%c", &character) != 1)
 	fprintf(stderr, "%s: error parsing argument for option %s\n",
 		argv[0], argv[i]), exit(1);
+#ifdef HAVE_NVML
+      if (!(character=='t' || character=='r' || character=='s' || character=='v' || character=='m' || character=='p' || character=='d'))
+	fprintf(stderr, "%s: argument %s must be t,r,v,m,d,p or s\n",
+		argv[0], argv[i]), exit(1);
+#else
       if (!(character=='t' || character=='r' || character=='s' || character=='v' || character=='m' || character=='p'))
 	fprintf(stderr, "%s: argument %s must be t,r,v,m,p or s\n",
 		argv[0], argv[i]), exit(1);
+#endif
       if(character=='s') togglemode=1;
       else if(character=='t') mode=TEMP;
       else if(character=='r') mode=RATE;	
-      else if(character=='v') mode=TEMP_V;	
-      else if(character=='m') mode=TEMP_M;	
+      else if(character=='v') mode=TEMP_V;
+      else if(character=='m') mode=TEMP_M;
+#ifdef HAVE_NVML
+      else if(character=='d') mode=TEMP_D;
+#endif
       else if(character=='p') mode=PERF;	
       i++;
     } else {
@@ -1498,7 +1621,9 @@ static void print_help(char *prog)
 	 "  -as  --animationspeed <int>    	set speed for charging animation in msec\n"           
 	 "  -hs  --historysize <int>       	set size of history for calculating\n"
 	 "                                 	average power consumption rate\n"           
-	 "  --use-proc                     	use depricated /proc interface instead of sysfs\n",  
+	 "  --use-proc                     	use depricated /proc interface instead of sysfs\n"
+	 "  --use-nvidia                   	use propoetary NVidia library to collect GPU temperature (if available)\n"
+	 "  --alarm-nvidia                 	alarm on GPU throttling (if NVidia library is available)\n",  
 	 prog, prog);
   /* OPTIONS SUPP :
    *  ? -f, --file    : configuration file
@@ -1548,7 +1673,11 @@ static void check_alarm()
   static light pre_backlight;
   static Bool in_alarm_mode = False;
   /* alarm mode */
+#ifdef HAVE_NVML
+  if ((cur_acpi_infos.low && (cur_acpi_infos.battery_status[0] || cur_acpi_infos.battery_status[1])) || (cur_acpi_infos.thermal_temp > alarm_level_temp) || alert_nvml > 1) {
+#else
   if ((cur_acpi_infos.low && (cur_acpi_infos.battery_status[0] || cur_acpi_infos.battery_status[1])) || (cur_acpi_infos.thermal_temp > alarm_level_temp)) {
+#endif
     if (!in_alarm_mode) {
       in_alarm_mode = True;
       pre_backlight = backlight;
@@ -1934,6 +2063,7 @@ int sysfs_read(AcpiInfos *i) {
   /* get sysfs thermal cpu info */
 	if (!has_i8k){
   	if ((fd = fopen(sysfs_thermal, "r"))) {
+  		DEBUGSTRING("sysfs_read(thermal_temp)\n")
     	fscanf(fd, "%ld", &raw);
     	i->thermal_temp = raw / 1000;
     	fclose(fd);
@@ -1943,16 +2073,19 @@ int sysfs_read(AcpiInfos *i) {
 		}
 	}
   if ((fd = fopen(sysfs_ac_state, "r"))) {
+  	DEBUGSTRING("sysfs_read(iac_line_status)\n")
     fscanf(fd, "%d", &i->ac_line_status);
     fclose(fd);
   }
 	if (!has_ibm_temp) {
   	if ((fd = fopen(sysfs_thermal_v, "r"))) {
+  		DEBUGSTRING("sysfs_read(sysfs_thermal_v)\n")
   		fscanf(fd, "%ld", &raw);
   		fclose(fd);
   		i->ibm_vtemp = raw / 1000;
   	}
   	if ((fd = fopen(sysfs_thermal_m, "r"))) {
+  		DEBUGSTRING("sysfs_read(sysfs_thermal_m)\n")
   		fscanf(fd, "%ld", &raw);
   		fclose(fd);
   		i->ibm_mtemp = raw / 1000;
@@ -2058,4 +2191,48 @@ int sysfs_read(AcpiInfos *i) {
   return retcode;
 }
 
+#ifdef HAVE_NVML
+static void read_d_temp(AcpiInfos *i) {
+	DEBUGSTRING("Reading NVIDIA data\n");
+	nvmlDevice_t device;
+	unsigned long long clocksThrottleReasons;
+	int temp;
+	nvmlReturn_t res = nvmlDeviceGetHandleByIndex_v2 (0, &device);
+ 	if (res){
+		printf("Unable to find GPU device: %s\n",nvmlErrorString(res));
+		return;
+	}
+	// check GPU temp
+	res = nvmlDeviceGetTemperature(device, NVML_TEMPERATURE_GPU, &(i->ibm_dtemp));
+ 	if (res){
+		printf("Unable to get GPU temperature via NVML: %s\n",nvmlErrorString(res));
+	}
+	// check throttling
+	if (alert_nvml) {
+		res = nvmlDeviceGetCurrentClocksThrottleReasons(device, &clocksThrottleReasons);
+ 		if (res){
+			printf("Unable to get GPU throttling status via NVML: %s\n",nvmlErrorString(res));
+		}
+		else {
+			if (clocksThrottleReasons > 4) {
+				alert_nvml=2;
+				printf("GPU throttling is in effect (reason: %lld)\n", clocksThrottleReasons);
+			}
+			else {
+				res = nvmlDeviceGetTemperatureThreshold(device, NVML_TEMPERATURE_THRESHOLD_SLOWDOWN, &temp); 
+ 				if (res){
+					printf("Unable to get GPU temperature threshold via NVML: %s\n",nvmlErrorString(res));
+				}
+				if (i->ibm_dtemp >= temp) {
+					alert_nvml=4;
+					printf("GPU temperature (%d) is higher than threshold %d!\n", i->ibm_dtemp, temp);
+				}
+				else {
+					alert_nvml=1;
+				}
+			}
+		}
+	}
+}
+#endif
 #endif

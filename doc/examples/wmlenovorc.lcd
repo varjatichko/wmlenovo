@@ -124,3 +124,7 @@ alarm		= 	10
 
 # alarm_temp		=	<integer> // temperature alarm level in Celsius
 alarm_temp		= 	90
+
+#use-nvidia
+
+#nvidia-alarm-on-throttling

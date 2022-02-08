@@ -2,8 +2,8 @@ dnl Process this file with autoconf to produce a configure script.
 AC_PREREQ(2.52)
 
 dnl AC_INIT(src/main.c)
-dnl AM_INIT_AUTOMAKE(wmlenovo, 0.1.8)
-AC_INIT(wmlenovo, 0.1.8, varjat@gmail.com)
+dnl AM_INIT_AUTOMAKE(wmlenovo, 0.1.9)
+AC_INIT(wmlenovo, 0.1.9, varjat@gmail.com)
 AC_CANONICAL_HOST
 AC_CANONICAL_TARGET
 AM_INIT_AUTOMAKE($PACKAGE_NAME, $PACKAGE_VERSION)
@@ -157,6 +157,31 @@ dnl Checks for library functions.
 AC_FUNC_FORK
 AC_FUNC_MALLOC
 AC_CHECK_FUNCS(select strtoul uname bzero select strcasecmp strstr)
+
+
+
+dnl ============================
+dnl Enable NVidia GPU card data
+dnl ============================
+
+AC_ARG_WITH([nvidia],
+            [AS_HELP_STRING([--with-nvidia],
+              [support temperature reading from NVidia GPU @<:@default=check@:>@])],
+            [],
+            [with_nvidia=check])
+          
+          LIBNVML=
+          AS_IF([test "x$with_nvidia" != xno],
+            [AC_CHECK_LIB([nvidia-ml], [main],
+              [AC_SUBST([LIBNVML], ["-lnvidia-ml"])
+               AC_DEFINE([HAVE_NVML], [1],
+                         [Define if you have NVML])
+              ],
+              [if test "x$with_nvidia" != xcheck; then
+                 AC_MSG_FAILURE(
+                   [--with-nvidia was given, but test for NVML failed])
+               fi
+              ], )])
 
 AC_CONFIG_FILES(Makefile \
 		src/Makefile \
