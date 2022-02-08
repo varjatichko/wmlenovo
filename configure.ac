@@ -2,8 +2,8 @@ dnl Process this file with autoconf to produce a configure script.
 AC_PREREQ(2.52)
 
 dnl AC_INIT(src/main.c)
-dnl AM_INIT_AUTOMAKE(wmlenovo, 0.1.9)
-AC_INIT(wmlenovo, 0.1.9, varjat@gmail.com)
+dnl AM_INIT_AUTOMAKE(wmlenovo, 0.2.0)
+AC_INIT(wmlenovo, 0.2.0, varjat@gmail.com)
 AC_CANONICAL_HOST
 AC_CANONICAL_TARGET
 AM_INIT_AUTOMAKE($PACKAGE_NAME, $PACKAGE_VERSION)

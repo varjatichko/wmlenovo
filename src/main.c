@@ -53,7 +53,7 @@
 #ifdef VERSION
 #define WMLENOVO_VERSION VERSION
 #else
-#define WMLENOVO_VERSION "0.1.9"
+#define WMLENOVO_VERSION "0.2.0"
 #endif
 
 #define FREE(data) {if (data) free (data); data = NULL;}
@@ -2196,7 +2196,7 @@ static void read_d_temp(AcpiInfos *i) {
 	DEBUGSTRING("Reading NVIDIA data\n");
 	nvmlDevice_t device;
 	unsigned long long clocksThrottleReasons;
-	int temp;
+	int temp = 100;
 	nvmlReturn_t res = nvmlDeviceGetHandleByIndex_v2 (0, &device);
  	if (res){
 		printf("Unable to find GPU device: %s\n",nvmlErrorString(res));
@@ -2217,20 +2217,19 @@ static void read_d_temp(AcpiInfos *i) {
 			if (clocksThrottleReasons > 4) {
 				alert_nvml=2;
 				printf("GPU throttling is in effect (reason: %lld)\n", clocksThrottleReasons);
+				return;
 			}
-			else {
-				res = nvmlDeviceGetTemperatureThreshold(device, NVML_TEMPERATURE_THRESHOLD_SLOWDOWN, &temp); 
- 				if (res){
-					printf("Unable to get GPU temperature threshold via NVML: %s\n",nvmlErrorString(res));
-				}
-				if (i->ibm_dtemp >= temp) {
-					alert_nvml=4;
-					printf("GPU temperature (%d) is higher than threshold %d!\n", i->ibm_dtemp, temp);
-				}
-				else {
-					alert_nvml=1;
-				}
-			}
+		}
+		res = nvmlDeviceGetTemperatureThreshold(device, NVML_TEMPERATURE_THRESHOLD_SLOWDOWN, &temp); 
+ 		if (res){
+			printf("Unable to get GPU temperature threshold via NVML: %s\n",nvmlErrorString(res));
+		}
+		if (i->ibm_dtemp >= temp) {
+			alert_nvml=4;
+			printf("GPU temperature (%d) is higher than threshold %d!\n", i->ibm_dtemp, temp);
+		}
+		else {
+			alert_nvml=1;
 		}
 	}
 }

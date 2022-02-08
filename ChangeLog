@@ -62,7 +62,7 @@ wmlenovo 0.1.8
 
  --  Alexey Varjat <Varjat@GMail.com> Fri, 11 Sep 2020 10:24:17 +0300
 
- wmlenovo 0.1.9
+wmlenovo 0.1.9
 
 	* Added temperature reading of NVidia GPU via NVML interface
 	* Added alerting on GPU throttling for NVidia GPU
@@ -71,5 +71,11 @@ wmlenovo 0.1.8
 	* Minor clean up
 	* Minor bug fixing
 
-
  --  Alexey Varjat <Varjat@GMail.com> Wed, 02 Feb 2022 19:54:46 +0300
+
+wmlenovo 0.2.0
+
+	* Improved alarm logic for NVidia GPU
+
+ --  Alexey Varjat <Varjat@GMail.com> Tue, 08 Feb 2022 22:17:19 +0300
+
