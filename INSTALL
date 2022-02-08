@@ -47,6 +47,10 @@ The simplest way to compile this package is:
      `sh ./configure' instead to prevent `csh' from trying to execute
      `configure' itself.
 
+		 Note: NVidia support will be enabled automatically if you host has
+		 installed both libnvidia-ml1 and libnvidia-ml-dev packages. Use the
+		 --without-nvidia option if you would like to don't use NVML API
+
      Running `configure' takes awhile.  While running, it prints some
      messages telling which features it is checking for.
 
