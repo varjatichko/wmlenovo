@@ -79,3 +79,10 @@ wmlenovo 0.2.0
 
  --  Alexey Varjat <Varjat@GMail.com> Tue, 08 Feb 2022 22:17:19 +0300
 
+wmlenovo 0.2.1
+
+	* Stop attempts to read GPU data via NVML in case of driver is not
+	initialized
+
+	--  Alexey Varjat <Varjat@GMail.com> Wed, 09 Feb 2022 20:49:44 +0300
+

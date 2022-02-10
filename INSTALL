@@ -71,6 +71,24 @@ The simplest way to compile this package is:
      all sorts of other programs in order to regenerate files that came
      with the distribution.
 
+If something will went wrong, please install autotools and use following method
+  1. `cd' to the directory containing the package's source code.
+
+	2. Execute `aclocal` command
+
+	3. Execute `autoheader`
+
+	4. Execute `autoconf`
+
+	5. Execute `automake --add-missing`
+
+	6. Perform configure command: `./configure` or `./configure --without-nvidia`
+	depending on need to use of NVML interface or not
+
+	7. Type `make`
+
+	8. Type `sudo make install` for final installation of the compiled package	
+
 Compilers and Options
 =====================
 

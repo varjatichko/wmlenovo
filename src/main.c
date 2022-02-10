@@ -53,7 +53,7 @@
 #ifdef VERSION
 #define WMLENOVO_VERSION VERSION
 #else
-#define WMLENOVO_VERSION "0.2.0"
+#define WMLENOVO_VERSION "0.2.1"
 #endif
 
 #define FREE(data) {if (data) free (data); data = NULL;}
@@ -715,7 +715,9 @@ static void update() {
   	}
 	}
 #ifdef HAVE_NVML
-	read_d_temp(&cur_acpi_infos);
+	if (use_nvml) {	
+		read_d_temp(&cur_acpi_infos);
+	}
 #endif
 
   draw_all();
@@ -2199,7 +2201,8 @@ static void read_d_temp(AcpiInfos *i) {
 	int temp = 100;
 	nvmlReturn_t res = nvmlDeviceGetHandleByIndex_v2 (0, &device);
  	if (res){
-		printf("Unable to find GPU device: %s\n",nvmlErrorString(res));
+		printf("Unable to find GPU device: %s.\nDisabling GPU data collection.",nvmlErrorString(res));
+		use_nvml = 0;
 		return;
 	}
 	// check GPU temp
