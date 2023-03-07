@@ -249,10 +249,10 @@ dockapp_setshape(Pixmap mask, int x_ofs, int y_ofs)
 
 
 void
-dockapp_copyarea(Pixmap src, Pixmap dist, int x_src, int y_src, int w, int h,
-		 int x_dist, int y_dist)
+dockapp_copyarea(Pixmap src, Pixmap dest, int x_src, int y_src, int w, int h,
+		 int x_dest, int y_dest)
 {
-    XCopyArea(display, src, dist, gc, x_src, y_src, w, h, x_dist, y_dist);
+    XCopyArea(display, src, dest, gc, x_src, y_src, w, h, x_dest, y_dest);
 }
 
 

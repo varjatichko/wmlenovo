@@ -86,3 +86,13 @@ wmlenovo 0.2.1
 
 	--  Alexey Varjat <Varjat@GMail.com> Wed, 09 Feb 2022 20:49:44 +0300
 
+
+wmlenovo 0.2.2
+
+	* Long awaiting fix of charge/discharge rate calculation
+	* Added voltage mode
+	* Added to option to display either current or capacity change rate (sysfs
+			only)
+
+	--  Alexey Varjat <Varjat@GMail.com> Tue, 07 Mar 2023 03:16:27 +0000
+

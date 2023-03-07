@@ -2,7 +2,7 @@
 .\" First parameter, NAME, should be all caps
 .\" Second parameter, SECTION, should be 1-8, maybe w/ subsection
 .\" other parameters are allowed: see man(7), man(1)
-.TH WMLENOVO 1 "February 8, 2022"
+.TH WMLENOVO 1 "March 7, 2023"
 .\" Please adjust this date whenever revising the manpage.
 .\"
 .\" Some roff macros, for reference:
@@ -134,7 +134,7 @@ set command for acpi standby
 .B \-m,  \-\-mode [t|r|s]
 set mode for the lower row , 
 t=CPU temperature,r=current rate,v=GPU temperature,
-m=Motherboard temperature,p=CPU speed,s=toggle
+m=Motherboard temperature,p=CPU speed,V=voltage,s=toggle
 .TP
 .B \-ts,  \-\-togglespeed <integer>
 set togglespeed in seconds
@@ -153,6 +153,9 @@ use proprietary NVidia API to get GPU temperature and optionaly alert on GPU thr
 .TP
 .B \-\-alarm\-nvidia
 Raise alarm when GPU switches to throttling state. Require to enable \-\-use\-nvidia option.
+.TP
+.B \-\-rate\-mA
+display current charge/discharge rate in mA instead of mW
 .SH AUTHOR
 .B wmlenovo
 was assembled by Aliaksei Varjat 

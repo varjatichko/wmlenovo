@@ -88,8 +88,8 @@ Bool dockapp_xpm2pixmap(char **data, Pixmap * pixmap, Pixmap * mask,
 			unsigned int nsymbols);
 Pixmap dockapp_XCreatePixmap(int w, int h);
 void dockapp_setshape(Pixmap mask, int x_ofs, int y_ofs);
-void dockapp_copyarea(Pixmap src, Pixmap dist, int x_src, int y_src,
-		      int w, int h, int x_dist, int y_dist);
+void dockapp_copyarea(Pixmap src, Pixmap dest, int x_src, int y_src,
+		      int w, int h, int x_dest, int y_dest);
 void dockapp_copy2window(Pixmap src);
 Bool dockapp_nextevent_or_timeout(XEvent * event, unsigned long miliseconds);
 unsigned long dockapp_getcolor(char *color);

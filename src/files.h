@@ -67,6 +67,8 @@ The fields read from /proc/i8k are:
 #define SYS_BAT1_CURRENT_NOW_FILE "/sys/class/power_supply/BAT1/current_now"
 #define SYS_BAT0_CHARGE_FULL_FILE "/sys/class/power_supply/BAT0/charge_full"
 #define SYS_BAT1_CHARGE_FULL_FILE "/sys/class/power_supply/BAT1/charge_full"
+#define SYS_BAT0_VOLTAGE_NOW_FILE "/sys/class/power_supply/BAT0/voltage_now"
+#define SYS_BAT1_VOLTAGE_NOW_FILE "/sys/class/power_supply/BAT1/voltage_now"
 #define SYS_AC_STATE_FILE "/sys/class/power_supply/AC/online" // 1/0
 #define SYS_IBM_FAN_FILE "/sys/devices/platform/thinkpad_hwmon/fan1_input" //XXXX Value in RPM
 #define SYS_IBM_CPU_TEMP_FILE "/sys/devices/platform/thinkpad_hwmon/temp1_input"

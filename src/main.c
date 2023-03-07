@@ -53,7 +53,7 @@
 #ifdef VERSION
 #define WMLENOVO_VERSION VERSION
 #else
-#define WMLENOVO_VERSION "0.2.1"
+#define WMLENOVO_VERSION "0.2.2"
 #endif
 
 #define FREE(data) {if (data) free (data); data = NULL;}
@@ -81,9 +81,11 @@
 #define TEMP_M 3
 #ifdef HAVE_NVML
 #define PERF 5
+#define VOLTAGE 6
 #define TEMP_D 4
 #else
 #define PERF 4
+#define VOLTAGE 5
 #endif
 
 #define NONE     0
@@ -108,9 +110,10 @@ typedef struct AcpiInfos {
   int					ac_line_status;
   int					battery_status[2];
   int					battery_percentage[2];
-  long				rate[2];
+  long	long	rate[2];
   long				remain[2];
   long				currcap[2];
+  long				voltage[2];
   int					thermal_temp;
   int					thermal_state;
   int					hours_left;
@@ -130,7 +133,7 @@ typedef struct AcpiInfos {
 } AcpiInfos;
 
 typedef struct RateListElem {
-  long rate[2];
+  long long rate[2];
   struct RateListElem *next;	
 } RateListElem;
 
@@ -179,6 +182,7 @@ static char state_files[2][256]={BAT0_STATE_FILE,BAT1_STATE_FILE};
 static char sysfs_state_files[2][256]={SYS_BAT0_STATE_FILE,SYS_BAT1_STATE_FILE};
 static char sysfs_charge_files[2][256]={SYS_BAT0_CHARGE_NOW_FILE,SYS_BAT1_CHARGE_NOW_FILE};
 static char sysfs_current_files[2][256]={SYS_BAT0_CURRENT_NOW_FILE,SYS_BAT1_CURRENT_NOW_FILE};
+static char sysfs_voltage_files[2][256]={SYS_BAT0_VOLTAGE_NOW_FILE,SYS_BAT1_VOLTAGE_NOW_FILE};
 static char sysfs_charge_full_files[2][256]={SYS_BAT0_CHARGE_FULL_FILE,SYS_BAT1_CHARGE_FULL_FILE};
 static char info_files[2][256]={BAT0_INFO_FILE,BAT1_INFO_FILE};
 static char thermal[256]=THERMAL_FILE;
@@ -200,11 +204,11 @@ static int      history_size      = RATE_HISTORY;
 static RateListElem *rateElements;
 static RateListElem *firstRateElem;
 #ifdef HAVE_NVML
-static short int max_mode	 = 5;
+static short int max_mode	 = 6;
 static short int use_nvml = 0;
 static short int alert_nvml = 0;
 #else
-	static short int max_mode	 = 4;
+	static short int max_mode	 = 5;
 #endif
 static short int has_ibm_fan = 1;
 static short int has_i8k = 0;
@@ -212,6 +216,7 @@ static short int has_ibm_temp = 1;
 static short int has_cpu_file = 1;
 static short int use_proc = 0;
 static short int use_bat_colors = 0;
+static short int rate_mA = 0;
 
 #ifdef linux
 # ifndef ACPI_32_BIT_SUPPORT
@@ -228,6 +233,7 @@ static void draw_remaining_time(AcpiInfos infos);
 static void draw_batt(AcpiInfos infos);
 static void draw_low();
 static void draw_rate(AcpiInfos infos);
+static void draw_voltage(AcpiInfos infos);
 static void draw_temp(AcpiInfos infos);
 static void draw_statusdigit(AcpiInfos infos);
 static void draw_pcgraph(AcpiInfos infos);
@@ -541,7 +547,7 @@ int init_stats(AcpiInfos *k) {
     	  }
     	  if(ptr = strstr(buf,"present rate:")) {
 					present=*(ptr+25);
-					sscanf(ptr,"%d",&k->rate[bat]);
+					sscanf(ptr,"%li",&k->rate[bat]);
     	  }
     	}
     	if((fd = fopen(info_files[i], "r"))){
@@ -562,17 +568,39 @@ int init_stats(AcpiInfos *k) {
 		else {
   		if (!access(sysfs_current_files[i], R_OK)) {
     		if((fd = fopen(sysfs_current_files[i], "r"))){
-					fscanf(fd,"%ld",&raw);
+					fscanf(fd,"%li",&raw);
 					if (raw <= 1000) raw = 0;
 					k->rate[i] = raw / 1000;
     	  	fclose(fd);
 	  			bat_status[i]|=STATE_OK;
+				}
+				if ((fd = fopen(sysfs_voltage_files[i], "r"))){
+					fscanf(fd,"%li",&raw);
+					if (raw > 1000) {
+						k->voltage[i] = raw / 1000;
+					}
+					else
+					{
+						rate_mA = 1;
+						k->voltage[i] = 0;
+					}
+    	  	fclose(fd);
+				}
+				else
+				{
+					rate_mA = 1;
+					k->voltage[i] = 0;
 				}
     		if((fd = fopen(sysfs_charge_full_files[i], "r"))){
 					fscanf(fd,"%ld",&raw);
 					k->currcap[i] = raw / 1000;
     	  	fclose(fd);
 	  			bat_status[i]|=INFO_OK;
+					if (!rate_mA && k->voltage[i]) {
+						if (k->voltage[i] > 1000) {
+							k->currcap[i] *= k->voltage[i] / 1000;
+						}
+					}
     	  }
     	}
 		}
@@ -626,7 +654,7 @@ int init_stats(AcpiInfos *k) {
     	  fclose(fd);
     	  if(ptr = strstr(buf,"present rate:")) {
 					ptr += 25;
-					sscanf(ptr,"%d",&k->rate[bat]);
+					sscanf(ptr,"%li",&k->rate[bat]);
     	  }
     	}
 		}
@@ -637,7 +665,7 @@ int init_stats(AcpiInfos *k) {
     		fclose(fd);
 			}
     	if((fd = fopen(sysfs_current_files[bat], "r"))){
-				fscanf(fd,"%ld",&raw);
+				fscanf(fd,"%li",&raw);
 				if (raw <= 1000) raw = 0;
 				k->rate[bat] = raw / 1000;
     		fclose(fd);
@@ -1029,11 +1057,11 @@ static void parse_config_file(char *config){
 
 	    if(!strcmp(item,"mode")){
 #ifdef HAVE_NVML
-	      if(strcmp(value,"rate") && strcmp(value,"toggle") && strcmp(value,"temp") && strcmp(value,"v_temp") && strcmp(value,"m_temp") && strcmp(value,"v_temp") && strcmp(value,"d_temp")) {
-		printf("mode must be one of rate,temp,v_temp,m_temp,d_temp,speed,toggle in line %i\n",linenr);
+	      if(strcmp(value,"rate") && strcmp(value,"toggle") && strcmp(value,"temp") && strcmp(value,"v_temp") && strcmp(value,"m_temp") && strcmp(value,"v_temp") && strcmp(value,"d_temp") && strcmp(value,"voltage")) {
+		printf("mode must be one of rate,temp,v_temp,m_temp,d_temp,speed,voltage,toggle in line %i\n",linenr);
 #else
-	      if(strcmp(value,"rate") && strcmp(value,"toggle") && strcmp(value,"temp") && strcmp(value,"v_temp") && strcmp(value,"m_temp") && strcmp(value,"v_temp")) {
-		printf("mode must be one of rate,temp,v_temp,m_temp,speed,toggle in line %i\n",linenr);
+	      if(strcmp(value,"rate") && strcmp(value,"toggle") && strcmp(value,"temp") && strcmp(value,"v_temp") && strcmp(value,"m_temp") && strcmp(value,"v_temp") && strcmp(value,"voltage")) {
+		printf("mode must be one of rate,temp,v_temp,m_temp,speed,voltage,toggle in line %i\n",linenr);
 #endif
 	      } else { 
 		if(strcmp(value,"rate")) mode=RATE;
@@ -1044,6 +1072,7 @@ static void parse_config_file(char *config){
 		if(strcmp(value,"d_temp")) mode=TEMP_D;
 #endif
 		if(strcmp(value,"speed")) mode=PERF;
+		if(strcmp(value,"voltage")) mode=VOLTAGE;
 		if(strcmp(value,"toggle")) togglemode=1;
 	      }
 	    }
@@ -1083,6 +1112,12 @@ static void draw_all(){
 	case RATE:
 		draw_rate(cur_acpi_infos);
 		break;
+	case VOLTAGE:
+		if (cur_acpi_infos.voltage[0] > 1000) {
+				draw_voltage(cur_acpi_infos);
+				break;
+		}
+		mode++;
   case TEMP:
 		draw_temp(cur_acpi_infos);
 		break;
@@ -1292,7 +1327,14 @@ static void draw_statusdigit(AcpiInfos infos) {
 
 static void draw_rate(AcpiInfos infos) {
   int light_offset=0;
-  long rate = infos.rate[0]+infos.rate[1];
+	long rate =0;
+	if(rate_mA) {
+  	rate = infos.rate[0]+infos.rate[1];
+	}
+	else
+	{
+  	rate = infos.rate[0] * infos.voltage[0] / 1000 +infos.rate[1] * infos.voltage[1] / 1000;
+	}
   if (backlight == LIGHTON) {
     light_offset=50;
   }
@@ -1304,7 +1346,26 @@ static void draw_rate(AcpiInfos infos) {
   dockapp_copyarea(*parts, pixmap, (rate%10)*5 + light_offset, 40, 5, 9, 29, 46);
 
   dockapp_copyarea(*parts, pixmap, 0 + light_offset, 49, 5, 9, 36, 46);  //m
-  dockapp_copyarea(*parts, pixmap, 5 + light_offset, 49, 5, 9, 42, 46);  //W
+	if (rate_mA) dockapp_copyarea(*parts, pixmap, 43 + light_offset, 127, 5, 9, 42, 46);  //A
+	else  dockapp_copyarea(*parts, pixmap, 5 + light_offset, 49, 5, 9, 42, 46);  //W
+
+}
+
+static void draw_voltage(AcpiInfos infos) {
+  int light_offset=0;
+  long voltage = infos.voltage[0];
+  if (backlight == LIGHTON) {
+    light_offset=50;
+  }
+
+  if (voltage > 9999) dockapp_copyarea(*parts, pixmap, (voltage/10000)*5 + light_offset, 40, 5, 9, 5, 46);
+  if (voltage > 999) dockapp_copyarea(*parts, pixmap, ((voltage/1000)%10)*5 + light_offset, 40, 5, 9, 11, 46);
+  if (voltage > 99) dockapp_copyarea(*parts, pixmap, ((voltage/100)%10)*5 + light_offset, 40, 5, 9, 17, 46);
+  if (voltage > 9) dockapp_copyarea(*parts, pixmap, ((voltage/10)%10)*5 + light_offset, 40, 5, 9, 23, 46);
+  dockapp_copyarea(*parts, pixmap, (voltage%10)*5 + light_offset, 40, 5, 9, 29, 46);
+
+  dockapp_copyarea(*parts, pixmap, 0 + light_offset, 49, 5, 9, 36, 46);  //m
+	dockapp_copyarea(*parts, pixmap, 48 + light_offset, 127, 5, 9, 42, 46);  //V
 
 }
 
@@ -1549,6 +1610,8 @@ static void parse_arguments(int argc, char **argv) {
 		argv[0], argv[i]), exit(1);
       history_size=integer;
       i++;                                                                       
+    } else if (!strcmp(argv[i], "--rate-mA"))  {
+      rate_mA = 1;
     } else if (!strcmp(argv[i], "--mode") || !strcmp(argv[i], "-m")) {
       if (argc == i + 1)
 	fprintf(stderr, "%s: error parsing argument for option %s\n",
@@ -1574,6 +1637,7 @@ static void parse_arguments(int argc, char **argv) {
       else if(character=='d') mode=TEMP_D;
 #endif
       else if(character=='p') mode=PERF;	
+      else if(character=='V') mode=VOLTAGE;	
       i++;
     } else {
       fprintf(stderr, "%s: unrecognized option '%s'\n", argv[0], argv[i]);
@@ -1615,14 +1679,15 @@ static void print_help(char *prog)
 	 "  -n,  --notify <string>         	command to launch in case of alarm is on\n"
 	 "  -ob,  --on-bat <string>         	command to launch during laptop's switching to BAT power\n"
 	 "  -oa,  --on-ac <string>         	command to launch during laptop's switching to AC power\n"
-	 "  -m,  --mode [t|r|v|m|p|s]      	set mode for the lower row , \n"
+	 "  -m,  --mode [t|r|v|m|p|V|s]      	set mode for the lower row , \n"
 	 "                                 	t=CPU temperature,r=current rate,\n"
 	 "                                 	v=GPU temperature, m=motherboard temperature,\n"
-	 "                                 	p=CPU speed,s=toggle\n"
+	 "                                 	p=CPU speed, V=voltage, s=toggle\n"
 	 "  -ts  --togglespeed <int>       	set toggle speed in seconds\n"           
 	 "  -as  --animationspeed <int>    	set speed for charging animation in msec\n"           
 	 "  -hs  --historysize <int>       	set size of history for calculating\n"
 	 "                                 	average power consumption rate\n"           
+	 "  --rate-mA                     	display (dis)charge rate in mA instead of mW\n"
 	 "  --use-proc                     	use depricated /proc interface instead of sysfs\n"
 	 "  --use-nvidia                   	use propoetary NVidia library to collect GPU temperature (if available)\n"
 	 "  --alarm-nvidia                 	alarm on GPU throttling (if NVidia library is available)\n",  
@@ -1739,7 +1804,7 @@ int acpi_read(AcpiInfos *i) {
   buf=(char *)malloc(sizeof(char)*512);
   RateListElem currRateElement;
   int		hist;
-  long	rate;
+  long long	rate;
   float	time;
   long	allcapacity=0;
   long	allremain=0;
@@ -1805,7 +1870,7 @@ int acpi_read(AcpiInfos *i) {
   	    }
   	    if ((ptr = strstr (buf, "present rate:"))) {
 					ptr += 25;
-					sscanf(ptr,"%d",&((*firstRateElem).rate[bat]));
+					sscanf(ptr,"%li",&((*firstRateElem).rate[bat]));
   	    }
   	  }
   	   
@@ -2050,7 +2115,7 @@ int sysfs_read(AcpiInfos *i) {
   buf=(char *)malloc(sizeof(char)*512);
   RateListElem currRateElement;
   int		hist;
-  long	rate;
+  long long	rate;
   float	time;
   long	allcapacity=0;
   long	allremain=0;
