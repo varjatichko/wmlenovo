@@ -97,7 +97,7 @@ wmlenovo 0.2.2
 	--  Alexey Varjat <Varjat@GMail.com> Tue, 07 Mar 2023 03:16:27 +0000
 
 
-wnlenovo 0.2.3
+wmlenovo 0.2.3
 
 	* Some minor optimizations
 	* Voltage is monitoring constantly now
