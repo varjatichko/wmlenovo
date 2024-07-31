@@ -277,8 +277,8 @@ dockapp_nextevent_or_timeout(XEvent *event, unsigned long miliseconds)
 
     XSync(display, False);
     if (XPending(display)) {
-	XNextEvent(display, event);
-	return True;
+      XNextEvent(display, event);
+      return True;
     }
 
     timeout.tv_sec = miliseconds / 1000;

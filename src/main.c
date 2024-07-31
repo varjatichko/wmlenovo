@@ -53,7 +53,7 @@
 #ifdef VERSION
 #define WMLENOVO_VERSION VERSION
 #else
-#define WMLENOVO_VERSION "0.2.2"
+#define WMLENOVO_VERSION "0.2.3"
 #endif
 
 #define FREE(data) {if (data) free (data); data = NULL;}
@@ -80,12 +80,12 @@
 #define TEMP_V 2
 #define TEMP_M 3
 #ifdef HAVE_NVML
-#define PERF 5
-#define VOLTAGE 6
+#define PERF 6
+#define VOLTAGE 5
 #define TEMP_D 4
 #else
-#define PERF 4
-#define VOLTAGE 5
+#define PERF 5
+#define VOLTAGE 4
 #endif
 
 #define NONE     0
@@ -150,14 +150,14 @@ Pixmap bat_parts;
 Pixmap ac_parts;
 Pixmap mask;
 static char	*display_name     = "";
-static char	light_color[256]  = "#ffaa00";	/* back-light color */
-static char	sign_light_color[256]  = "#996633";	/* back-light sign color */
+static char	light_color[256]  = "#ffffff";	/* back-light color */
+static char	sign_light_color[256]  = "#ffcccc";	/* back-light sign color */
 static char	foreground_color[256]  = "#00ff00";	/* foreground color */
 static char	background_color[256]  = "#222222";	/* background color */
 static char	sign_color[256]  = "#227722";	/* sign color */
-static char	foreground_b_color[256]  = "#aa0000";	/* foreground back-light color */
+static char	foreground_b_color[256]  = "#ff0000";	/* foreground back-light color */
 static char	bat_light_color[256]  = "#ff9999";	/* back-light color */
-static char	bat_sign_light_color[256]  = "#aa7777";	/* back-light sign color */
+static char	bat_sign_light_color[256]  = "#ff8888";	/* back-light sign color */
 static char	bat_foreground_color[256]  = "#ff0000";	/* foreground color */
 static char	bat_background_color[256]  = "#222222";	/* background color */
 static char	bat_sign_color[256]  = "#772222";	/* sign color */
@@ -1110,14 +1110,10 @@ static void draw_all(){
   draw_remaining_time(cur_acpi_infos);
   switch (mode) {
 	case RATE:
-		draw_rate(cur_acpi_infos);
+		if (number_of_batteries) {draw_rate(cur_acpi_infos);
 		break;
-	case VOLTAGE:
-		if (cur_acpi_infos.voltage[0] > 1000) {
-				draw_voltage(cur_acpi_infos);
-				break;
-		}
-		mode++;
+    }
+    mode++;
   case TEMP:
 		draw_temp(cur_acpi_infos);
 		break;
@@ -1141,9 +1137,19 @@ static void draw_all(){
 		}
 		mode++;
 #endif
+	case VOLTAGE:
+		if (cur_acpi_infos.voltage[0] > 1000) {
+			draw_voltage(cur_acpi_infos);
+		  break;
+    }
+    mode++;
 	case PERF:
 		draw_speed(cur_acpi_infos);
 		break;
+  default:
+    mode=0;
+    printf("ERROR: Something went wrong -  unable to determine current mode\n");
+    break;
   }
   draw_statusdigit(cur_acpi_infos);
   draw_pcgraph(cur_acpi_infos);
@@ -1179,18 +1185,18 @@ static void switch_light() {
     break;
   }
 
-  draw_remaining_time(cur_acpi_infos);
-  draw_rate(cur_acpi_infos);
-  draw_statusdigit(cur_acpi_infos);
-  draw_pcgraph(cur_acpi_infos);
-  if(cur_acpi_infos.battery_status[0]==CHARGING || cur_acpi_infos.battery_status[1]==CHARGING){
-    blink_batt();
-  } else draw_batt(cur_acpi_infos);
-  if(cur_acpi_infos.low){
-    draw_low();
-  }
-  /* show */
-  dockapp_copy2window(pixmap);
+  ////draw_remaining_time(cur_acpi_infos);
+  ////if (number_of_batteries) draw_rate(cur_acpi_infos);
+  ////draw_statusdigit(cur_acpi_infos);
+  ////draw_pcgraph(cur_acpi_infos);
+  ////if(cur_acpi_infos.battery_status[0]==CHARGING || cur_acpi_infos.battery_status[1]==CHARGING){
+  ////  blink_batt();
+  ////} else draw_batt(cur_acpi_infos);
+  ////if(cur_acpi_infos.low){
+  ////  draw_low();
+  ////}
+  /////* show */
+  ////dockapp_copy2window(pixmap);
 }
 
 static void draw_batt(AcpiInfos infos){
@@ -1402,15 +1408,15 @@ static void draw_pcgraph(AcpiInfos infos) {
   	}
   	width=percentage * 32 / 100 / number_of_batteries;
   	percentage/=number_of_batteries;
-	}
-		else percentage=0;
-    dockapp_copyarea(*parts, pixmap, 0, 58+light_offset, width, 5, 4, 26);
+    if (width) dockapp_copyarea(*parts, pixmap, 0, 58+light_offset, width, 5, 4, 26);
     if(percentage == 100){ // don't display leading 0
-    	dockapp_copyarea(*parts, pixmap, 4*(percentage/100), 126+light_offset, 3, 5, 37, 26);
+      dockapp_copyarea(*parts, pixmap, 4*(percentage/100), 126+light_offset, 3, 5, 37, 26);
     }
     if(percentage > 9){ //don't display leading 0
-     dockapp_copyarea(*parts, pixmap, 4*((percentage%100)/10), 126+light_offset, 3, 5, 41, 26);
+      dockapp_copyarea(*parts, pixmap, 4*((percentage%100)/10), 126+light_offset, 3, 5, 41, 26);
     }
+	}
+	else percentage=0;
 	dockapp_copyarea(*parts, pixmap, 4*(percentage%10), 126+light_offset, 3, 5, 45, 26);		
 }
 
@@ -1425,10 +1431,10 @@ static void draw_fan(AcpiInfos infos) {
 	{
 		height=1;
   	width=infos.ibm_fan2 * 30 / 6000;
-    if (width < 31 ) dockapp_copyarea(*parts, pixmap, 0, 58+light_offset, width, height, 4, 35);
+    if (width < 31 && width > 0) dockapp_copyarea(*parts, pixmap, 0, 58+light_offset, width, height, 4, 35);
 	}
   width=infos.ibm_fan * 30 / 6000;
-    if (width < 31 ) dockapp_copyarea(*parts, pixmap, 0, 58+light_offset, width, height, 4, 33);
+    if (width < 31 && width > 0) dockapp_copyarea(*parts, pixmap, 0, 58+light_offset, width, height, 4, 33);
   if (backlight == LIGHTON) {
     light_offset=50;
   }
@@ -1728,13 +1734,14 @@ static void sysfs_getinfos(AcpiInfos *infos) {
 }
 
 
-
 int acpi_exists() {
   if (access(ACPIDEV, R_OK))
     return 0;
   else
     return 1;
 }
+
+
 static void check_alarm()
 {
   static light pre_backlight;
@@ -2187,10 +2194,18 @@ int sysfs_read(AcpiInfos *i) {
 					case 'F':
 		  		  i->battery_status[bat]=0;
 		  		  break;
+					case 'N':
+		  		  i->battery_status[bat]=0;
+		  		  break;
 		  		}
   	  	if ((fd = fopen(sysfs_charge_files[bat], "r"))) {
 					fscanf(fd,"%ld",&raw);
 					i->remain[bat] = raw / 1000;
+    			fclose(fd);
+				}
+  	  	if ((fd = fopen(sysfs_voltage_files[bat], "r"))) {
+					fscanf(fd,"%ld",&raw);
+					i->voltage[bat] = raw / 1000;
     			fclose(fd);
 				}
   	  	if ((fd = fopen(sysfs_current_files[bat], "r"))) {

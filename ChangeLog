@@ -96,3 +96,15 @@ wmlenovo 0.2.2
 
 	--  Alexey Varjat <Varjat@GMail.com> Tue, 07 Mar 2023 03:16:27 +0000
 
+
+wnlenovo 0.2.3
+
+	* Some minor optimizations
+	* Voltage is monitoring constantly now
+	* Fixed broken modes sequence / freezed app on systems with no battery
+	installed/detected
+	* Improved default colors when backlight is on
+	* Fix incorrectly displayed battery icon(s). They are now visible when they
+	are discharging or charging only 
+	
+	--  Alexey Varjat <Varjat@GMail.com> Wed, 31 Jul 2024 19:24:33 +0000

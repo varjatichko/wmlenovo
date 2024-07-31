@@ -3,8 +3,8 @@ AC_PREREQ([2.71])
 
 dnl AC_INIT
 AC_CONFIG_SRCDIR([src/main.c])
-dnl AM_INIT_AUTOMAKE(wmlenovo, 0.2.2)
-AC_INIT([wmlenovo],[0.2.2],[varjat@gmail.com])
+dnl AM_INIT_AUTOMAKE(wmlenovo, 0.2.3)
+AC_INIT([wmlenovo],[0.2.3],[varjat@gmail.com])
 AC_CANONICAL_HOST
 AC_CANONICAL_TARGET
 AM_INIT_AUTOMAKE($PACKAGE_NAME, $PACKAGE_VERSION)
